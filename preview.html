@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deep Question Companion — Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            charcoal: {
+              900: '#0d0d0f', 800: '#141418', 700: '#1c1c22',
+              600: '#242430', 500: '#2e2e3a',
+            },
+            gold: { DEFAULT: '#c9a84c', light: '#e0c068', muted: '#8a6f2e' },
+          },
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background: #0d0d0f; font-family: 'Inter', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    ::selection { background: #c9a84c30; color: #e0c068; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #141418; }
+    ::-webkit-scrollbar-thumb { background: #2e2e3a; border-radius: 3px; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
+    .animate-slide-up { animation: slideUp 0.6s ease-out forwards; }
+    .dot-bounce { animation: bounce 1s ease-in-out infinite; }
+    .dot-bounce:nth-child(2) { animation-delay: 0.15s; }
+    .dot-bounce:nth-child(3) { animation-delay: 0.3s; }
+    .pulse-dot { animation: pulse 2s ease-in-out infinite; }
+    .glow { box-shadow: 0 0 30px rgba(201,168,76,0.3); }
+    .glow:hover { box-shadow: 0 0 45px rgba(201,168,76,0.5); }
+    .card-hover:hover { border-color: rgba(201,168,76,0.4); background: #242430; }
+    .cat-active { border-color: #c9a84c; background: rgba(201,168,76,0.08); box-shadow: 0 0 20px rgba(201,168,76,0.12); }
+  </style>
+</head>
+<body class="min-h-screen text-slate-200">
+
+  <!-- Ambient glow -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden">
+    <div style="position:absolute;top:-50px;left:50%;transform:translateX(-50%);width:600px;height:300px;background:rgba(201,168,76,0.05);border-radius:50%;filter:blur(100px);"></div>
+  </div>
+
+  <main class="relative max-w-4xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
+
+    <!-- ─── HEADER ─── -->
+    <header class="text-center mb-16 animate-fade-in">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border mb-6"
+           style="border-color:rgba(201,168,76,0.2);background:rgba(201,168,76,0.05)">
+        <span class="w-1.5 h-1.5 rounded-full bg-yellow-500 pulse-dot"></span>
+        <span class="text-yellow-500 text-xs tracking-widest uppercase font-medium">AI-Powered Insight</span>
+      </div>
+      <h1 class="text-4xl sm:text-5xl font-bold text-slate-100 tracking-tight mb-4">
+        Deep Question<span class="text-yellow-500"> Companion</span>
+      </h1>
+      <p class="text-slate-400 text-base sm:text-lg max-w-lg mx-auto leading-relaxed">
+        รู้จักเข้าใจสิ่งต่างๆให้ลึกขึ้น
+      </p>
+    </header>
+
+    <!-- ─── CATEGORY SELECTOR ─── -->
+    <section class="mb-8">
+      <p class="text-xs text-slate-500 tracking-widest uppercase font-semibold mb-4">เลือกหมวดหมู่</p>
+      <div id="categories" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <!-- filled by JS -->
+      </div>
+    </section>
+
+    <!-- ─── GENERATE BUTTON ─── -->
+    <section class="flex justify-center mb-12">
+      <button id="genBtn" onclick="handleGenerate()"
+        class="px-10 py-4 rounded-xl font-semibold text-sm tracking-widest uppercase transition-all duration-300
+               bg-charcoal-600 text-slate-600 border border-charcoal-500 cursor-not-allowed"
+        disabled>
+        Generate Deep Insight
+      </button>
+    </section>
+
+    <!-- ─── RESULT AREA ─── -->
+    <div id="result" class="hidden">
+      <div class="h-px mb-10" style="background:linear-gradient(to right,transparent,#2e2e3a,transparent)"></div>
+
+      <!-- Loading skeleton (shown first) -->
+      <div id="loading" class="animate-fade-in">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="flex gap-1">
+            <span class="w-2 h-2 rounded-full bg-yellow-500 dot-bounce"></span>
+            <span class="w-2 h-2 rounded-full bg-yellow-500 dot-bounce"></span>
+            <span class="w-2 h-2 rounded-full bg-yellow-500 dot-bounce"></span>
+          </div>
+          <p class="text-slate-400 text-sm tracking-wide">กำลังค้นหา insight สำหรับคุณ...</p>
+        </div>
+        <div class="space-y-4">
+          <div class="rounded-xl p-5 bg-charcoal-700" style="background:#1c1c22;border:1px solid #242430">
+            <div class="h-3 w-24 rounded mb-4" style="background:#2e2e3a;animation:pulse 2s infinite"></div>
+            <div class="h-24 rounded-lg" style="background:#242430;animation:pulse 2s infinite"></div>
+          </div>
+          <div class="rounded-xl p-5" style="background:#1c1c22;border:1px solid #242430">
+            <div class="h-3 w-32 rounded mb-4" style="background:#2e2e3a;animation:pulse 2s infinite"></div>
+            <div class="h-40 rounded-lg" style="background:#242430;animation:pulse 2s infinite"></div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="rounded-xl p-5" style="background:#1c1c22;border:1px solid #242430">
+              <div class="h-3 w-20 rounded mb-4" style="background:#2e2e3a;animation:pulse 2s infinite"></div>
+              <div class="h-20 rounded-lg" style="background:#242430;animation:pulse 2s infinite"></div>
+            </div>
+            <div class="rounded-xl p-5" style="background:#1c1c22;border:1px solid #242430">
+              <div class="h-3 w-20 rounded mb-4" style="background:#2e2e3a;animation:pulse 2s infinite"></div>
+              <div class="h-20 rounded-lg" style="background:#242430;animation:pulse 2s infinite"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actual result card (shown after "loading") -->
+      <div id="resultCard" class="hidden animate-slide-up">
+        <!-- header row -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <p id="randomLabel" class="text-xs mb-1 tracking-wide hidden" style="color:rgba(201,168,76,0.7)"></p>
+            <h2 id="catLabel" class="text-slate-300 text-sm font-medium tracking-wide"></h2>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="copyResult()" id="copyBtn"
+              class="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium tracking-wide transition-all duration-200 text-slate-400"
+              style="border:1px solid #2e2e3a">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+              </svg>
+              Copy
+            </button>
+            <button onclick="handleGenerate()"
+              class="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium tracking-wide transition-all duration-200 text-yellow-500"
+              style="border:1px solid rgba(201,168,76,0.3)">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              Generate Again
+            </button>
+          </div>
+        </div>
+
+        <div class="h-px mb-6" style="background:linear-gradient(to right,transparent,rgba(201,168,76,0.3),transparent)"></div>
+
+        <div class="space-y-4">
+          <!-- คำถาม -->
+          <div class="rounded-xl p-5" style="background:rgba(201,168,76,0.05);border:1px solid rgba(201,168,76,0.2)">
+            <p class="text-xs font-bold tracking-widest uppercase mb-3 text-yellow-500">คำถามวันนี้</p>
+            <p id="rQuestion" class="text-base font-medium text-slate-100 leading-relaxed"></p>
+          </div>
+          <!-- มุมมอง -->
+          <div class="rounded-xl p-5" style="background:#1c1c22;border:1px solid #242430">
+            <p class="text-xs font-bold tracking-widest uppercase mb-3 text-slate-500">บทสนทนา / มุมมอง</p>
+            <div id="rPerspective" class="text-slate-200 text-sm leading-relaxed space-y-3"></div>
+          </div>
+          <!-- Mental Model + Example -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="rounded-xl p-5" style="background:#1c1c22;border:1px solid #242430">
+              <p class="text-xs font-bold tracking-widest uppercase mb-3 text-slate-500">Mental Model</p>
+              <p id="rModel" class="text-slate-200 text-sm leading-relaxed"></p>
+            </div>
+            <div class="rounded-xl p-5" style="background:#1c1c22;border:1px solid #242430">
+              <p class="text-xs font-bold tracking-widest uppercase mb-3 text-slate-500">ตัวอย่างจากโลกจริง</p>
+              <p id="rExample" class="text-slate-200 text-sm leading-relaxed"></p>
+            </div>
+          </div>
+          <!-- คำถามต่อ -->
+          <div class="rounded-xl p-5" style="background:#141418;border:1px solid #2e2e3a">
+            <p class="text-xs font-bold tracking-widest uppercase mb-2 text-slate-500">คำถามไว้คิดต่อวันนี้</p>
+            <p id="rReflection" class="text-sm font-medium italic leading-relaxed text-yellow-300"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="relative mt-20 py-8 text-center" style="border-top:1px solid #1c1c22">
+    <p class="text-slate-600 text-xs tracking-wide">Deep Question Companion · Powered by Claude AI</p>
+  </footer>
+
+<script>
+const CATEGORIES = [
+  { id:'productivity', label:'Productivity & Performance', sub:'การเติบโต ขบวนการทำงาน และการบริหารพลังงาน', icon:'⚡' },
+  { id:'mindfulness',  label:'Mindfulness & Emotional Awareness', sub:'สติ การเท่าทันอารมณ์ และการตระหนักรู้ในปัจจุบัน', icon:'🌊' },
+  { id:'wealth',       label:'Wealth & Financial Wisdom', sub:'ปัญญาทางการเงิน ความมั่งคั่ง และ Money Mindset', icon:'◈' },
+  { id:'psychology',   label:'Psychology & Self-Discovery', sub:'จิตวิทยา การขุดค้นปมในอดีต และการเข้าใจพฤติกรรมตนเอง', icon:'◎' },
+  { id:'relationships',label:'Deep Relationships & Connection', sub:'ความสัมพันธ์เชิงลึก ครอบครัว คนรัก และคู่ค้า', icon:'◇' },
+  { id:'purpose',      label:'Purpose, Values & Philosophy', sub:'เป้าหมายสูงสุด คุณค่าหลักในชีวิต และปรัชญานำทาง', icon:'✦' },
+  { id:'health',       label:'Health & Wellness', sub:'สุขภาพกาย สุขภาพใจ และการเป็นอยู่ที่ดีอย่างยั่งยืน', icon:'◉' },
+  { id:'random',       label:'Random', sub:'สุ่มหมวดใดหมวดหนึ่ง', icon:'∞' },
+];
+
+// ─── Sample pool ─────────────────────────────────────────────────────────────
+// Shuffle-deck picker: exhausts all variants before recycling.
+// Extra rule: first card of new deck ≠ last card of previous deck → zero
+// back-to-back repeats even across deck boundaries.
+const decks = {};      // { catId: remaining index array }
+const lastPicked = {}; // { catId: last index drawn }
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function pickSample(catId) {
+  const pool = SAMPLES[catId];
+  if (!pool || pool.length === 0) return null;
+  if (pool.length === 1) return pool[0];
+
+  if (!decks[catId] || decks[catId].length === 0) {
+    let arr = shuffle(pool.map((_, i) => i));
+    // If the top of the new deck equals the last card drawn, rotate it to the back
+    if (lastPicked[catId] !== undefined && arr[arr.length - 1] === lastPicked[catId]) {
+      arr = [...arr.slice(0, arr.length - 1), arr[arr.length - 1]]; // move to front instead
+      // simpler: just swap top with a random non-last position
+      const swap = Math.floor(Math.random() * (arr.length - 1));
+      [arr[arr.length - 1], arr[swap]] = [arr[swap], arr[arr.length - 1]];
+    }
+    decks[catId] = arr;
+  }
+
+  const idx = decks[catId].pop();
+  lastPicked[catId] = idx;
+  return pool[idx];
+}
+
+const SAMPLES = {
+  productivity: [
+    {question:'คุณรู้ไหมว่าสิ่งที่คุณเรียกว่า "ทำงานหนัก" บางครั้งคือการหนีจากการตัดสินใจที่แท้จริง?',
+      perspective: 'มีความแตกต่างที่ละเอียดอ่อนมากระหว่าง "ยุ่ง" กับ "มีประสิทธิภาพ" และคนส่วนใหญ่ไม่เคยหยุดมานั่งคิดว่าตัวเองกำลังอยู่ฝั่งไหน\n\nCalendar ที่เต็มแน่นอาจให้ความรู้สึกว่ากำลัง "ขับเคลื่อนไปข้างหน้า" แต่ความจริงแล้วมันอาจเป็นกลไกป้องกันตัวจากการต้องนั่งเงียบๆ แล้วถามตัวเองว่า "งานที่ฉันทำอยู่นี้ สำคัญจริงๆ ไหม?"\n\nนักจิตวิทยาเรียกปรากฏการณ์นี้ว่า "Pseudo-productivity" — ความรู้สึกว่าตัวเองกำลังผลิตผลลัพธ์ ทั้งที่จริงๆ แค่กำลังจัดการ "กิจกรรม" ไม่ใช่ "ผลลัพธ์"',
+      mental_model: '**Eisenhower Matrix ในเวอร์ชันที่ลึกกว่า:** แทนที่จะแบ่งแค่ urgent/important ลองถามว่างานไหนคือสิ่งที่ "มีแค่คุณทำได้" เพราะนั่นคือจุดที่พลังงานของคุณควรไปอยู่จริงๆ',
+      real_example: 'Steve Jobs โด่งดังในเรื่องการพูดว่า "no" มากกว่า "yes" เขาตัดโปรดักส์ออกไป 70% เมื่อกลับมา Apple ไม่ใช่เพราะขี้เกียจ แต่เพราะเข้าใจว่า focus ที่แท้จริงต้องการการ sacrifice',
+      reflection: '"วันนี้คุณ busy หรือ productive — และคุณรู้ความแตกต่างได้อย่างไร?"'
+    },
+    {
+      question: 'ถ้าพลังงานของคุณมีจำกัด คุณกำลังใช้มันเพื่อสร้างสิ่งที่สำคัญ หรือแค่ตอบสนองต่อสิ่งที่เร่งด่วน?',
+      perspective: 'สมองมนุษย์ถูกออกแบบมาให้ตอบสนองต่อสิ่งที่เร่งด่วนก่อนเสมอ — นั่นคือ survival instinct แต่โลกธุรกิจสมัยใหม่เต็มไปด้วยสิ่งที่ "ดูเร่งด่วน" แต่ไม่ได้ "สำคัญ" จริงๆ\n\nนักวิจัย Cal Newport เรียกสิ่งนี้ว่า "hyperactive hive mind" — วัฒนธรรมที่ทุกคนตอบสนองต่อ input แบบ real-time จนไม่มีเวลาคิดเชิงลึก\n\nงานที่สร้าง leverage ที่แท้จริงมักต้องการบล็อกเวลายาวๆ ที่ไม่มีการรบกวน ซึ่งขัดแย้งกับวัฒนธรรม "always on" ที่หลายองค์กรยึดถือ',
+      mental_model: '**Deep Work vs Shallow Work:** งาน deep work คืองานที่ต้องใช้สมาธิเต็มที่และสร้างคุณค่าที่ยากจะลอกเลียนแบบ ขณะที่ shallow work คืองานที่ทำได้แม้ถูกรบกวน ถามตัวเองว่าวันนี้ทำ deep work กี่ชั่วโมง',
+      real_example: 'Bill Gates มี "Think Week" ทุก 6 เดือน — ปลีกตัวไปคนเดียว 7 วัน อ่านและคิดโดยไม่มีการประชุม ไม่มีอีเมล หลายการตัดสินใจเชิงกลยุทธ์สำคัญที่สุดของ Microsoft เกิดขึ้นในช่วงเวลานั้น',
+      reflection: '"สัปดาห์นี้คุณได้ทำงานที่ต้องใช้สมาธิเต็มที่จริงๆ กี่ชั่วโมง?"'
+    },
+    {
+      question: 'คุณเคยประเมินว่างานชิ้นหนึ่งต้องใช้เวลา 30 นาที แต่ใช้ไป 3 ชั่วโมง — เกิดอะไรขึ้นในช่องว่างนั้น?',
+      perspective: 'นักจิตวิทยาเรียกปรากฏการณ์นี้ว่า "Planning Fallacy" — เราประเมินเวลาต่ำเกินไปเกือบทุกครั้ง เพราะสมองจินตนาการถึงสถานการณ์ ideal ไม่ใช่สถานการณ์จริง\n\nแต่ที่ลึกกว่านั้นคือ เราไม่ค่อยถามตัวเองว่า "ครั้งที่แล้วที่ทำงานแบบนี้ใช้เวลาเท่าไหร่?" Daniel Kahneman เรียกการมองย้อนกลับไปดูข้อมูลจริงว่า "outside view" และมันแม่นกว่า inside view เกือบทุกครั้ง\n\nปัญหาไม่ใช่แค่การ plan ผิด แต่คือเราไม่ยอม update mental model หลังจากที่ผิดซ้ำๆ',
+      mental_model: '**Reference Class Forecasting:** แทนที่จะถามว่า "งานนี้ต้องใช้เวลาเท่าไหร่?" ให้ถามว่า "งานแบบนี้ที่ผ่านมาเคยใช้เวลาเฉลี่ยเท่าไหร่?" แล้วบวก buffer เพิ่ม 30–50%',
+      real_example: 'การก่อสร้าง Sydney Opera House ประเมินว่าจะเสร็จใน 6 ปี ใช้จริง 14 ปี และงบบานปลาย 10 เท่า — ไม่ใช่เพราะทีมไม่เก่ง แต่เพราะทุกคนประเมินจาก inside view ทั้งนั้น',
+      reflection: '"งานสำคัญชิ้นต่อไปของคุณ — คุณประเมินเวลาจากความหวัง หรือจากข้อมูลย้อนหลัง?"'
+    },
+    {
+      question: 'ถ้าคุณถูกห้ามทำงานเกิน 4 ชั่วโมงต่อวัน — คุณจะเลือกทำอะไร และอะไรที่จะหายไปจากชีวิตโดยที่คุณไม่เสียใจ?',
+      perspective: '"Constraints breed creativity" ไม่ใช่แค่ quote สวยงาม แต่เป็นปรากฏการณ์ที่ถูก validate ซ้ำแล้วซ้ำเล่า คนที่มีเวลาไม่จำกัดมักทำงานได้น้อยกว่าคนที่มี deadline\n\nParkinson\'s Law บอกว่างานจะขยายตัวเต็มเวลาที่ให้ไว้เสมอ ถ้าให้ 8 ชั่วโมง งานจะใช้ 8 ชั่วโมง ถ้าให้ 4 ชั่วโมง งานเดียวกันอาจใช้แค่ 4 ชั่วโมง\n\nคำถามที่น่าสนใจกว่าคือ งานส่วนไหนที่คุณทำเพราะ "ควรทำ" แต่ถ้า constraint บังคับให้ตัด คุณก็ไม่ได้เสียใจจริงๆ',
+      mental_model: '**Parkinson\'s Law + Time Boxing:** กำหนด end time ก่อน แล้วค่อยทำงานให้เสร็จในนั้น ไม่ใช่ทำจนเสร็จแล้วค่อยหยุด ความแตกต่างเล็กๆ นี้ให้ผลลัพธ์ที่ต่างกันมาก',
+      real_example: 'Elon Musk ใช้ time-boxing ละเอียดระดับ 5 นาทีต่อ slot ไม่ใช่เพราะ obsessive แต่เพราะมันบังคับให้ตัดสินใจว่าอะไรสำคัญพอที่จะได้รับ attention จริงๆ',
+      reflection: '"ถ้าพรุ่งนี้คุณทำงานได้แค่ 4 ชั่วโมง — 4 ชั่วโมงนั้นจะไปกับอะไร?"'},
+    {question:'คุณตัดสินใจเรื่องสำคัญในชีวิตด้วยข้อมูล หรือด้วยความกดดันจากเวลา?',perspective:'Jeff Bezos แบ่งการตัดสินใจเป็น 2 ประเภท — Type 1 คือ irreversible ต้องใช้เวลาคิดมาก Type 2 คือ reversible ตัดสินใจเร็วได้ ปัญหาของคนส่วนใหญ่คือ treat ทุกอย่างเป็น Type 1 จนเกิด analysis paralysis\n\nหรือไม่ก็ treat ทุกอย่างเป็น Type 2 จนตัดสินใจเรื่องใหญ่แบบชั่ววูบ\n\nความสามารถในการแยกแยะว่าการตัดสินใจนี้คือประเภทไหน คือ meta-skill ที่สำคัญมากสำหรับผู้นำ',mental_model:'**Two-Door Framework:** Type 1 = one-way door ต้องพิจารณาถี่ถ้วน Type 2 = two-way door ตัดสินใจเร็วแล้วปรับได้ การรู้ประเภทก่อนตัดสินใจช่วยประหยัดทั้งเวลาและพลังงาน',real_example:'Amazon เติบโตเร็วเพราะ Bezos ฝึกทีมให้ตัดสินใจ Type 2 อย่างรวดเร็ว โดยไม่ต้องรอ consensus — "Most decisions should be made with somewhere around 70% of the information you wish you had"',reflection:'"การตัดสินใจที่คุณยังค้างอยู่ตอนนี้ — มันเป็น Type 1 หรือ Type 2?"'},
+    {question:'ถ้าคุณดูตาราง calendar ของสัปดาห์ที่ผ่านมา — มันสะท้อน priority ที่คุณพูดถึงจริงๆ ไหม?',perspective:'Richard Feynman เคยบอกว่า "The first principle is that you must not fool yourself — and you are the easiest person to fool." ไม่มีที่ไหนที่จริงกว่านี้อีกแล้วในเรื่อง time management\n\nเรามักบอกว่าครอบครัวสำคัญที่สุด แต่ calendar เต็มไปด้วยการประชุม เราบอกว่าสุขภาพสำคัญ แต่ไม่มีเวลาออกกำลังกาย\n\nCalendar ไม่โกหก มันบอกว่าเราลงทุนชีวิตไปกับอะไรจริงๆ ไม่ใช่สิ่งที่เราคิดว่าสำคัญ',mental_model:'**Calendar Audit:** ดู calendar ย้อนหลัง 2 สัปดาห์ แบ่งกิจกรรมตาม value category ที่คุณบอกว่าสำคัญ แล้วดูว่า % เวลาตรงกับ priority ที่พูดไหม ช่องว่างนั้นคือ integrity gap',real_example:'Warren Buffett มีปฏิทินที่แทบว่างเปล่าทุกสัปดาห์โดยเจตนา เขาบอกว่า "The difference between successful people and really successful people is that really successful people say no to almost everything"',reflection:'"สัปดาห์นี้คุณใช้เวลากับอะไรมากที่สุด — และถ้าเทียบกับ value ที่คุณพูดถึง มันตรงกันแค่ไหน?"'},
+    {question:'Burnout ที่คุณรู้สึก — มันมาจากการทำมากเกินไป หรือจากการทำสิ่งที่ไม่ใช่ของคุณ?',perspective:'นักจิตวิทยาองค์กร Christina Maslach ที่ศึกษา burnout มานานกว่า 30 ปี พบว่า burnout ไม่ได้เกิดจากการทำงานหนักเพียงอย่างเดียว แต่เกิดจากการทำงานที่รู้สึกว่า "ไม่มีความหมาย" หรือ "ไม่สอดคล้องกับค่านิยม"\n\nนั่นแปลว่าคนที่ทำงาน 80 ชั่วโมงต่อสัปดาห์อาจไม่ burnout ถ้างานนั้นสอดคล้องกับสิ่งที่พวกเขาเป็น\n\nในขณะที่คนทำงาน 40 ชั่วโมงอาจ burnout ถ้าทุกนาทีรู้สึกว่าตัวเองกำลังทำในสิ่งที่ไม่ใช่ตัวเอง',mental_model:'**Zone of Genius (Gay Hendricks):** แบ่งงานเป็น 4 โซน — Incompetence, Competence, Excellence, Genius โซน Genius คืองานที่คุณทำได้ดีและมีพลังงานมากขึ้นเมื่อทำ ไม่ใช่เหนื่อยลง Burnout มักเกิดจากการอยู่ใน Competence หรือ Excellence นานเกินไป',real_example:'Steve Jobs กลับมา Apple แล้วตัดโปรดักส์ออกเกือบหมด ไม่ใช่แค่เพื่อ focus แต่เพราะเขารู้ว่าตัวเองอยู่ใน zone ของตัวเองเมื่อทำงาน intersection ของ design และ technology — ทุกอย่างนอกนั้นเป็นแค่ noise',reflection:'"งานที่ทำให้คุณ energized มากที่สุดคืออะไร — และคุณใช้เวลากับมันมากพอไหม?"'},
+    {question:'คุณเคยสังเกตไหมว่า meeting ส่วนใหญ่ในชีวิตคุณไม่ได้ต้องการคุณจริงๆ?',perspective:'Cal Newport พบว่าผู้บริหารระดับสูงโดยเฉลี่ยใช้เวลากับ meetings มากกว่า 60% ของวันทำงาน และน้อยกว่า 10% ของ meetings เหล่านั้นต้องการ presence ของพวกเขาจริงๆ\n\nMeeting culture เกิดจากหลายสาเหตุ — ความกลัวว่าจะพลาด, culture ที่ต้องการ consensus, และการที่ทุกคน default ไปที่การ schedule meeting แทนที่จะส่ง async message\n\nผู้นำที่เก่งจริงๆ ไม่ได้ attend ทุก meeting ที่มีชื่อพวกเขา พวกเขาเลือกว่า meeting ไหนต้องการ physical presence และอันไหนแค่ต้องการ decision',mental_model:'**Meeting ROI Test:** ก่อน attend meeting ถามว่า 1) ฉันจะ add value อะไร? 2) ถ้าฉันไม่ไป meeting จะดำเนินต่อได้ไหม? 3) เป้าหมายของ meeting ชัดเจนไหม? ถ้าตอบไม่ได้ชัดเจน — decline หรือ delegate',real_example:'Elon Musk ส่ง memo ถึงทีม Tesla ว่า "Walk out of a meeting or drop off a call as soon as it is obvious you aren\'t adding value. It is not rude to leave, it is rude to make someone stay and waste their time."',reflection:'"Meeting ที่คุณ attend สัปดาห์ที่ผ่านมา — มีกี่ % ที่ต้องการคุณจริงๆ?"'},
+    {question:'ทักษะที่คุณ proud ที่สุดในตอนนี้ — มันยังจะมีคุณค่าในอีก 10 ปีข้างหน้าไหม?',perspective:'โลกเปลี่ยนเร็วพอที่จะทำให้ทักษะที่มีค่าในวันนี้ล้าสมัยได้ภายใน 5 ปี แต่สิ่งที่น่าสนใจกว่าคือ "meta-skills" — ความสามารถในการเรียนรู้สิ่งใหม่ได้เร็ว ความสามารถในการคิดเชิงวิพากษ์ และความสามารถในการทำงานกับความ ambiguous\n\nงานวิจัยของ McKinsey พบว่า skills ที่ยาก automate มากที่สุดคือ emotional intelligence, creativity, และ complex problem solving — ไม่ใช่ technical skills\n\nคำถามที่ดีกว่าคือ "ฉันกำลัง invest ใน skill ที่ต้านทาน automation ได้ หรือ skill ที่กำลังจะถูกแทนที่?"',mental_model:'**Skill Half-Life:** technical skills มี half-life ลดลงเรื่อยๆ ในขณะที่ human skills อย่าง judgment, empathy, creativity มี half-life ยาวขึ้น การ invest เวลาในการพัฒนาต้องคำนึงถึง half-life ของ skill นั้น',real_example:'Satya Nadella เข้ามาเป็น CEO ของ Microsoft แล้ว shift culture จาก "know-it-all" เป็น "learn-it-all" เพราะเขาเชื่อว่าในโลกที่เปลี่ยนเร็ว ความสามารถในการเรียนรู้คือ competitive advantage ที่ยั่งยืนที่สุด',reflection:'"ทักษะอะไรที่คุณอยากพัฒนาในปีนี้ — และมันจะยิ่งมีค่าขึ้นหรือน้อยลงใน 10 ปีข้างหน้า?"'},
+    {question:'เหตุผลที่คุณยัง procrastinate เรื่องสำคัญที่สุดในชีวิต — มันคืออะไรจริงๆ?',perspective:'Timothy Pychyl นักวิจัยด้าน procrastination พบว่า procrastination ไม่ใช่ปัญหาของการบริหารเวลา แต่เป็นปัญหาของการบริหารอารมณ์ — เราหลีกเลี่ยงงานที่ทำให้รู้สึก uncomfortable ไม่ว่าจะเป็นความกลัวล้มเหลว ความกลัวถูกตัดสิน หรือความรู้สึกว่างานนั้น overwhelming\n\nวิธีที่ work ในระยะสั้นคือ distraction แต่มันไม่ได้แก้ความรู้สึก uncomfortable ที่ซ่อนอยู่ใต้งาน\n\nการเข้าใจว่า "งานชิ้นนี้ทำให้ฉันรู้สึกอะไร" มักเป็นก้าวแรกที่ทรงพลังที่สุดในการจัดการ procrastination',mental_model:'**Emotion-First Approach:** แทนที่จะถามว่า "ทำไมฉันถึงไม่ทำ?" ให้ถามว่า "ฉันรู้สึกอะไรเมื่อนึกถึงงานนี้?" ความรู้สึกนั้นคือ key ไม่ใช่ task management system',real_example:'นักเขียน Anne Lamott แนะนำ concept "Shitty First Draft" — อนุญาตให้ตัวเองทำงานได้แย่ก่อน เพราะ perfectionism คือ root cause หลักของ procrastination ในงานสร้างสรรค์',reflection:'"งานที่คุณหนีมากที่สุดตอนนี้ — ความรู้สึกอะไรที่ซ่อนอยู่ใต้มัน?"'},
+    {question:'คุณเคยถามตัวเองไหมว่า ทำไมบางวันคุณทำงานได้ดีมาก และบางวันทำไม่ได้เลย?',perspective:'งานวิจัยด้าน circadian rhythm พบว่าแต่ละคนมี "chronotype" ที่ต่างกัน — บางคน peak performance ช่วงเช้า บางคนช่วงบ่าย และ performance ลดลงอย่างมีนัยสำคัญในช่วงที่ไม่ใช่ peak\n\nแต่ที่น่าสนใจกว่านั้นคือ performance ไม่ได้ขึ้นอยู่แค่กับเวลาในวัน มันขึ้นอยู่กับ "energy state" — physical, emotional, mental, และ spiritual\n\nคนที่ track energy ของตัวเองแทนที่จะ track เวลา มักพบว่าพวกเขา produce งานที่มีคุณภาพดีกว่าในเวลาน้อยกว่า',mental_model:'**Energy Management vs Time Management:** Tony Schwartz เสนอว่าการบริหาร energy ของ 4 มิติ (physical, emotional, mental, spiritual) ให้ผลลัพธ์ที่ดีกว่าการบริหารเวลาเพียงอย่างเดียว เพราะเวลา fixed แต่ energy สามารถ renew ได้',real_example:'LeBron James ลงทุนกว่า 1.5 ล้านดอลลาร์ต่อปีเพื่อ optimize ร่างกาย ไม่ใช่เพราะ obsessed แต่เพราะเข้าใจว่าใน high-performance game ทุก percentage point ของ energy สำคัญ',reflection:'"ช่วงเวลาไหนของวันที่คุณ produce งานที่ดีที่สุด — และคุณ protect ช่วงเวลานั้นไว้ไหม?"'},
+    {question:'งานที่คุณทำได้ดีที่สุดในชีวิต — คุณทำมันบ่อยแค่ไหน?',perspective:'Gallup วิจัยพนักงานกว่า 25 ล้านคนและพบว่า คนที่ได้ใช้ strengths ในงานทุกวัน มีความสุขกับงาน productive กว่า และมี well-being ดีกว่าอย่างมีนัยสำคัญ\n\nแต่ที่น่าตกใจคือคนส่วนใหญ่ใช้เวลากว่า 80% ของวันกับงานที่ตัวเองไม่ได้ถนัดที่สุด และพยายาม "fix weaknesses" แทนที่จะ "amplify strengths"\n\nParadox ของการพัฒนาตัวเองคือ การพยายามแก้จุดอ่อนทำให้คุณกลายเป็น "average at everything" แต่การ double down ใน strengths ทำให้คุณกลายเป็น "exceptional at something"',mental_model:'**Strengths-Based Development:** ระบุ top 3 strengths ของคุณแล้วถามว่างานที่ทำอยู่ใช้ strengths เหล่านั้นไหม ถ้าไม่ — ต้องออกแบบงานใหม่หรือ delegate งานที่ไม่ใช่ strengths',real_example:'Lin-Manuel Miranda เขียน Hamilton ใน notebook ส่วนตัวเป็นเวลาหลายปีโดยไม่มีใครเห็น เพราะเขารู้ว่า "writing hip-hop musicals" คือ zone ของตัวเอง ไม่ใช่แค่สิ่งที่ทำได้ดี แต่คือสิ่งที่เขาไม่สามารถไม่ทำได้',reflection:'"ถ้าคุณมีเวลา 1 ชั่วโมงต่อวันสำหรับงานที่ทำได้ดีที่สุด — คุณจะเลือกทำอะไร?"'},
+    {question:'decision ที่คุณหลีกเลี่ยงมานานที่สุดในชีวิตตอนนี้คืออะไร?',perspective:'นักจิตวิทยาพบว่าการ "ไม่ตัดสินใจ" ไม่ใช่ neutral — มันคือการเลือกที่จะให้สถานการณ์ปัจจุบันดำเนินต่อ ซึ่งมักมี cost ที่เพิ่มขึ้นเรื่อยๆ ทั้งด้านพลังงาน ความสัมพันธ์ และโอกาส\n\nการหลีกเลี่ยงการตัดสินใจมักเกิดจาก 3 สาเหตุ — ความกลัวว่าจะเลือกผิด ความกลัวที่จะทำให้คนอื่นผิดหวัง หรือ information ที่ยังไม่ครบ\n\nแต่ในโลกความเป็นจริง ไม่มีการตัดสินใจที่ใหญ่พอที่จะรอได้จนกว่าจะมี perfect information',mental_model:'**Cost of Indecision:** คำนวณว่าการไม่ตัดสินใจในเรื่องนั้น cost คุณเท่าไหร่ต่อเดือน (เวลา พลังงาน โอกาส ความสัมพันธ์) แล้วคูณด้วยจำนวนเดือนที่ผ่านมา นั่นคือ true cost ของ indecision',real_example:'Colin Powell มี "40-70 rule" — ตัดสินใจเมื่อมีข้อมูล 40-70% อย่าน้อยกว่าหรือมากกว่านั้น น้อยกว่า 40% คือ reckless มากกว่า 70% คือสูญเสียโอกาส',reflection:'"การตัดสินใจที่คุณเลื่อนมานานที่สุด — ถ้าต้องตัดสินใจพรุ่งนี้เลย คุณจะเลือกอะไร?"'}
+  ],
+  mindfulness: [
+    {
+      question: 'ถ้าอารมณ์ที่คุณรู้สึกตอนนี้ไม่ใช่ "ความจริง" แต่เป็นแค่ข้อมูล — คุณจะใช้มันยังไง?',
+      perspective: 'เราถูกสอนมาว่าอารมณ์คือสิ่งที่ต้องจัดการ ควบคุม หรือระงับ แต่จริงๆ แล้วอารมณ์คือระบบ feedback ที่ซับซ้อนมาก ที่วิวัฒนาการสร้างขึ้นมาให้คุณ\n\nปัญหาไม่ได้อยู่ที่ "รู้สึก" แต่อยู่ที่การ "ตีความ" สิ่งที่รู้สึก ความโกรธบอกอะไรบางอย่าง ความกังวลบอกอะไรบางอย่าง แต่ส่วนใหญ่เราข้ามขั้นตอนการฟัง แล้วกระโดดไปที่การตอบสนอง',
+      mental_model: '**RAIN Framework:** Recognize (รู้จักอารมณ์) → Allow (ยอมให้มันมีอยู่) → Investigate (สำรวจว่ามันบอกอะไร) → Nurture (ดูแลตัวเองด้วยความเมตตา) — ทำให้อารมณ์กลายเป็นครูแทนที่จะเป็นศัตรู',
+      real_example: 'Marcus Aurelius จดบันทึกส่วนตัวทุกคืนไม่ใช่เพื่อ therapy แต่เพื่อสังเกตรูปแบบความคิดของตัวเอง หนังสือ Meditations คือ output ของการ observe อารมณ์ตัวเองอย่างเป็นระบบตลอดชีวิต',
+      reflection: '"อารมณ์ที่คุณมักจะ suppress มากที่สุดคืออะไร และมันพยายามบอกอะไรคุณ?"'
+    },
+    {
+      question: 'คุณเคยสังเกตไหมว่าตอนที่คุณ "ไม่มีเวลา" นั้น จริงๆ แล้วคุณกำลังเลือกที่จะไม่ present กับอะไรบางอย่าง?',
+      perspective: '"ไม่มีเวลา" เป็นหนึ่งในคำโกหกที่เราบอกตัวเองบ่อยที่สุด เพราะทุกคนมี 24 ชั่วโมงเท่ากัน สิ่งที่แตกต่างคือสิ่งที่เราเลือกให้ attention\n\nนักจิตวิทยา William James บอกว่า "The faculty of voluntarily bringing back a wandering attention, over and over again, is the very root of judgment, character, and will" — attention ไม่ใช่แค่ทรัพยากร แต่คือตัวตนของเรา\n\nเวลาที่คุณบอกว่าไม่มีเวลาให้ใคร มันหมายความว่าคุณเลือกให้ attention ไปที่อื่น และนั่นคือ statement เกี่ยวกับ values ของคุณ',
+      mental_model: '**Attention Economy ส่วนตัว:** ลองดูว่าในหนึ่งวัน attention ของคุณไหลไปที่ไหนมากที่สุด — สิ่งที่ได้รับ attention คือสิ่งที่คุณ "ลงทุน" ชีวิตให้ ไม่ใช่สิ่งที่คุณพูดว่าสำคัญ',
+      real_example: 'Jeff Bezos ตัดสินใจว่าตัวเองจะไม่รับการประชุมก่อน 10 โมงเช้า เพราะต้องการชั่วโมงแรกของวันไว้ให้กับ "present thinking" ไม่ใช่ reactive thinking — เขาเรียกมันว่า "puttering"',
+      reflection: '"วันนี้คุณให้ attention กับอะไรมากที่สุด — และนั่นตรงกับ priority จริงๆ ของคุณไหม?"'
+    },
+    {
+      question: 'ตอนที่คุณ "อยู่กับปัจจุบัน" จริงๆ ครั้งล่าสุดคือเมื่อไหร่ — และมันรู้สึกอย่างไร?',
+      perspective: 'Default Mode Network คือส่วนของสมองที่ทำงานเมื่อเราไม่ได้โฟกัสกับอะไรโดยเฉพาะ — มันคือเครื่องจักรที่คิดเรื่องอดีตและอนาคตตลอดเวลา งานวิจัยพบว่าเราใช้เวลาประมาณ 47% ของวันอยู่กับ mind-wandering\n\nที่น่าสนใจคือการ mind-wander ไม่ได้แย่เสมอไป บางครั้งมันคือที่มาของ creative insight แต่ปัญหาคือเรา mind-wander ไปในทิศทางลบมากกว่าบวก\n\nสิ่งที่ทำให้เรา present ได้ดีที่สุดมักไม่ใช่การ meditate แต่คือการทำสิ่งที่ท้าทายพอดีๆ กับ skill — ไม่ง่ายเกินไป ไม่ยากเกินไป Mihaly Csikszentmihalyi เรียกมันว่า "Flow"',
+      mental_model: '**Flow State Conditions:** ความท้าทายต้องอยู่ที่ระดับ 4% สูงกว่า skill ปัจจุบัน ต่ำกว่านั้น = เบื่อ สูงกว่านั้น = วิตกกังวล ช่องแคบๆ นั้นคือที่ที่ present awareness เกิดขึ้นเองตามธรรมชาติ',
+      real_example: 'Roger Federer เล่าว่าตอนที่เขาเล่นดีที่สุด เขาไม่ได้คิดอะไรเลย — ไม่ใช่เพราะว่างสมอง แต่เพราะร่างกายและสมองทำงานพร้อมกันจนไม่มีช่องว่างให้ self-talk เข้ามา',
+      reflection: '"กิจกรรมอะไรในชีวิตคุณที่ทำแล้วลืมเวลาได้อย่างสมบูรณ์?"'
+    },
+    {
+      question: 'ทำไมคุณถึงยากที่จะ "ไม่ทำอะไรเลย" สักแค่ 10 นาที โดยไม่หยิบโทรศัพท์?',
+      perspective: 'B.J. Fogg นักวิจัยด้านพฤติกรรมจาก Stanford บอกว่า discomfort จากการนั่งเฉยๆ ไม่ใช่ weakness แต่เป็นสัญญาณว่าสมองของเราถูก train มาให้ต้องการ stimulation ตลอดเวลา\n\nSocial media ออกแบบมาให้ "ค่าใช้จ่าย" ของการหยิบโทรศัพท์ต่ำมาก ในขณะที่ reward ดูสูง แต่ความจริงคือ scrolling ทำให้เราได้รับข้อมูลแต่ไม่ได้รับ meaning\n\nคนที่ทนกับ boredom ได้นานกว่า มักมีความสามารถในการคิดเชิงลึกและสร้างสรรค์มากกว่า เพราะ boredom คือสภาวะที่สมองเริ่ม connect dots ที่ไม่เคยถูก connect',
+      mental_model: '**Attention Residue:** ทุกครั้งที่เราสลับ task หรือเช็คโทรศัพท์ มีส่วนหนึ่งของ attention ที่ค้างอยู่กับสิ่งก่อนหน้า การ check โทรศัพท์ 50 ครั้งต่อวัน = attention ที่กระจัดกระจาย 50 ชิ้น',
+      reflection: '"ครั้งสุดท้ายที่คุณนั่งอยู่กับตัวเองโดยไม่มีอะไร entertain — คุณรู้สึกอะไร?"'},
+    {question:'ความโกรธที่คุณรู้สึกครั้งล่าสุด — มันบอกอะไรเกี่ยวกับสิ่งที่คุณให้คุณค่ามากที่สุด?',perspective:'Aristotle บอกว่า "Anybody can become angry — that is easy, but to be angry with the right person and to the right degree and at the right time and for the right purpose, and in the right way — that is not within everybody\'s power and is not easy."\n\nความโกรธมักถูกมองว่าเป็น negative emotion แต่มันคือ signal ที่บอกว่ามีบางอย่างที่คุณให้คุณค่าถูก violate — ความยุติธรรม ความเคารพ ขอบเขตส่วนตัว หรือความไว้วางใจ\n\nคนที่ไม่รู้จักความโกรธของตัวเองมักแสดงออกมาในรูปแบบที่ distorted — passive aggression, sarcasm, หรือ explosion ที่ disproportionate กับสถานการณ์',mental_model:'**Anger as Boundary Signal:** เมื่อโกรธ ถาม 3 คำถาม: 1) อะไรถูก violate? 2) สิ่งนั้นสำคัญแค่ไหนสำหรับฉัน? 3) ฉันต้องการ boundary หรือ action อะไร? คำตอบนั้นคือ roadmap ไม่ใช่แค่ feeling',real_example:'Ruth Bader Ginsburg เปลี่ยนความโกรธต่อความไม่เท่าเทียมทางเพศให้กลายเป็น strategic action มากกว่า 40 ปี เธอบอกว่า "Fight for the things that you care about, but do it in a way that will lead others to join you"',reflection:'"ความโกรธที่คุณรู้สึกบ่อยที่สุด — มันกำลังบอกว่าอะไรในชีวิตคุณยัง out of alignment?"'},
+    {question:'คุณ "เห็น" ตัวเองอย่างชัดเจนแค่ไหน — หรือคุณรู้จักตัวเองผ่านสายตาของคนอื่น?',perspective:'Tasha Eurich นักจิตวิทยาองค์กรวิจัยพบว่า 95% ของคนคิดว่าตัวเอง self-aware แต่จริงๆ มีแค่ 10-15% เท่านั้นที่ self-aware จริง\n\nความน่าสนใจคือ self-awareness มี 2 ประเภท — internal (รู้จักความคิด ความรู้สึก และค่านิยมของตัวเอง) และ external (เข้าใจว่าคนอื่นมองเราอย่างไร)\n\nคนที่มีทั้งสองอย่างพร้อมกันนั้นหายาก เพราะมักจะถนัดแบบหนึ่งมากกว่าอีกแบบ และทั้งสองแบบก็ผิดพลาดได้ในแบบต่างกัน',mental_model:'**Dual Self-Awareness Model:** Internal awareness ต้องการ introspection External awareness ต้องการ honest feedback จากคนอื่น การมีแค่อย่างเดียวทำให้เกิด blind spots ที่อันตราย',real_example:'Ray Dalio สร้าง "Dot Collector" system ที่ให้ทุกคนใน Bridgewater rate กันและกัน real-time เพราะเชื่อว่า self-knowledge ต้องอาศัย external data ไม่ใช่แค่ introspection',reflection:'"ถ้าคนที่ใกล้ชิดคุณที่สุด 3 คนได้อธิบายตัวคุณ — คุณคิดว่าพวกเขาจะพูดว่าอะไร และมันต่างจากที่คุณคิดแค่ไหน?"'},
+    {question:'ความสงบที่คุณรู้สึกในแต่ละวัน — มันมาจาก "ความเป็นอยู่ที่ดีจริงๆ" หรือจาก "การหลีกเลี่ยงสิ่งที่รบกวน"?',perspective:'มีความแตกต่างระหว่าง peace of mind จากการแก้ปัญหา กับ numbness จากการ avoid ปัญหา ทั้งสองอย่างให้ความรู้สึกคล้ายกันในระยะสั้น แต่ต่างกันมากในระยะยาว\n\nนักจิตวิทยา Mihaly Csikszentmihalyi พบว่าคนที่มีความสุขจริงๆ ไม่ได้มีชีวิตที่ไม่มีปัญหา แต่มีทักษะในการ engage กับ challenges อย่างมีสติ\n\nการเลือก scroll โทรศัพท์ ดูซีรีส์ หรือ overeat เพื่อหนีความรู้สึกไม่สบาย คือ "pseudo-peace" ที่ทิ้ง residue ไว้ในจิตใจ',mental_model:'**Avoidance vs Resolution:** ทุกครั้งที่ distract ตัวเองจากความรู้สึก ให้ถามว่า "ฉันกำลัง recharge หรือหนี?" Recharge คือการพัก conscious choice Resolution คือการเผชิญ Avoidance คือการสะสมภาระ',real_example:'Pema Chödrön สอนว่า "The most fundamental aggression to ourselves, the most fundamental harm we can do to ourselves, is to remain ignorant by not having the courage and the respect to look at ourselves honestly and gently."',reflection:'"ความสงบที่คุณรู้สึกในตอนนี้ — มันมาจากการที่ชีวิตดีขึ้นจริง หรือจากการที่คุณเลิกสนใจบางอย่างไปแล้ว?"'},
+    {question:'เวลาที่คุณ "ฟัง" คนอื่นพูด — คุณกำลังฟังเพื่อเข้าใจ หรือฟังเพื่อตอบ?',perspective:'Stephen Covey บอกว่า "Most people do not listen with the intent to understand; they listen with the intent to reply." และงานวิจัยยืนยันว่าเราจำสิ่งที่ได้ยินได้แค่ 25-50% ของทั้งหมด\n\nปัญหาคือสมองคิดเร็วกว่าที่คนพูด — เรา process ภาษาได้ประมาณ 400-500 คำต่อนาที แต่คนพูดได้แค่ 125-175 คำ ช่องว่างนั้นเต็มไปด้วยการ plan สิ่งที่จะพูด การตัดสิน หรือการ wander\n\nการฟังอย่างแท้จริงต้องการ effort มากกว่าที่คิด เพราะมันต้องการการ suspend judgment และ let go of the need to respond',mental_model:'**Levels of Listening (Otto Scharmer):** Level 1 = Downloading (แค่ยืนยัน belief เดิม) Level 2 = Factual (เปิดรับข้อมูลใหม่) Level 3 = Empathic (เห็นจากมุมมองของเขา) Level 4 = Generative (เปิดให้ความเป็นไปได้ใหม่เข้ามา)',real_example:'Nelson Mandela โด่งดังในเรื่องการฟังอย่าง present ทุกคนที่เคยนั่งคุยกับเขาบอกว่ารู้สึกเหมือนเป็นคนสำคัญที่สุดในห้อง เพราะเขาฟังโดยไม่ formulate คำตอบไปพร้อมกัน',reflection:'"ในการสนทนาครั้งล่าสุดที่สำคัญ — คุณจำสิ่งที่อีกฝ่ายพูดได้จริงๆ แค่ไหน?"'},
+    {question:'ความกังวลที่คุณมีตอนนี้ — ถ้าย้อนไปดูอีก 5 ปีข้างหน้า มันจะยังสำคัญอยู่ไหม?',perspective:'นักจิตวิทยาพบว่าคนเรามักประเมิน duration ของความรู้สึกไม่ดีสูงเกินความเป็นจริง — เรียกว่า "impact bias" เราคิดว่าจะทุกข์นานกว่าที่จะเป็นจริง\n\nในขณะเดียวกัน เราก็ประเมิน resilience ของตัวเองต่ำไป คนมีความสามารถในการ recover จากเหตุการณ์เลวร้ายมากกว่าที่พวกเขาคิด\n\nMark Twain เคยพูดว่า "I am an old man and have known a great many troubles, but most of them never happened." — ส่วนใหญ่ของสิ่งที่เรากังวลไม่เคยเกิดขึ้น',mental_model:'**10-10-10 Rule:** เมื่อเผชิญกับ decision หรือ worry ถามว่า "มันจะสำคัญแค่ไหนใน 10 นาที? 10 เดือน? 10 ปี?" Framework นี้ช่วย calibrate ว่าเรื่องนี้สมควรได้รับ attention เท่าไหร่จริงๆ',real_example:'Jeff Bezos ตัดสินใจออกจาก Wall Street เพื่อตั้ง Amazon ด้วย regret minimization framework — เขาถามว่า "ตอนอายุ 80 ฉันจะเสียใจกับการที่ไม่ได้ลองไหม?" คำตอบนั้นชัดเจนและ override ความกังวลระยะสั้นทั้งหมด',reflection:'"ความกังวลที่ใหญ่ที่สุดของคุณตอนนี้ — ถ้าเป็นเรื่องที่คุณจะหัวเราะได้ใน 5 ปีข้างหน้า มันคืออะไร?"'},
+    {question:'คุณสังเกตได้ไหมว่า เมื่อไหร่ที่คุณ "อยู่" ในบทสนทนา และเมื่อไหร่ที่คุณแค่ "ปรากฏตัว"?',perspective:'Presence ไม่ใช่แค่การอยู่ในห้องเดียวกัน มันคือ quality of attention ที่คุณให้ และคนรอบข้างรู้สึกได้ถึงความแตกต่าง\n\nในยุคที่โทรศัพท์อยู่บนโต๊ะทุกครั้งที่นั่งกินข้าว ที่ check email ระหว่างฟังลูกพูด หรือที่ plan งานระหว่างการประชุม — partial attention กลายเป็น default\n\nงานวิจัยพบว่าแค่การมีโทรศัพท์วางอยู่บนโต๊ะ (แม้จะไม่ได้ใช้) ลด quality ของการสนทนาได้อย่างมีนัยสำคัญ เพราะทั้งสองฝ่ายรู้ว่ามันอยู่ที่นั่น',mental_model:'**Presence as a Resource:** Attention เป็นสิ่งที่หายาก ผู้คนรู้สึกได้เมื่อได้รับ full attention และรู้สึกได้เมื่อถูก partial attention ในความสัมพันธ์ทั้งงานและส่วนตัว presence คือ gift ที่มีค่ามากที่สุด',real_example:'Oprah Winfrey ทำ interview กว่า 37,000 ครั้ง เธอบอกว่าสิ่งที่ทุกคนต้องการเหมือนกันคือ "Did you hear me? Did what I say matter to you?" การให้ presence แท้จริงคือการตอบคำถามนั้นด้วยการกระทำ',reflection:'"คนที่สำคัญที่สุดในชีวิตคุณได้รับ full presence ของคุณบ่อยแค่ไหน?"'}
+  ],
+  wealth: [
+    {
+      question: 'ถ้าคุณไม่ต้องกังวลเรื่องเงินอีกต่อไป — คุณจะกลัวอะไร?',
+      perspective: 'คนส่วนใหญ่คิดว่าความมั่งคั่งจะแก้ปัญหาได้ แต่นักจิตวิทยาพบว่าคนที่ได้เงินมาเยอะกว่าที่คาดหวังมักจะ "ย้ายความกังวล" ไปที่เรื่องอื่นแทน ไม่ได้หายกังวล\n\nDaniel Kahneman ค้นพบว่าความสุขจาก income หยุดเพิ่มขึ้นอย่างมีนัยสำคัญเมื่อถึงระดับที่ cover ความต้องการพื้นฐาน สิ่งที่คนร่ำรวยต้องเผชิญคือ "the void" — พื้นที่ว่างที่เงินไม่อาจเติมได้\n\nคำถามที่น่าสนใจกว่าคือ "คุณใช้เงินเป็น proxy สำหรับอะไร?" — ความปลอดภัย? การยอมรับ? อิสรภาพ? คำตอบนั้นบอกอะไรเกี่ยวกับตัวคุณมากกว่าตัวเงินเอง',
+      mental_model: '**Money as a Proxy:** เงินมักเป็นตัวแทนของสิ่งที่ลึกกว่า เช่น ความปลอดภัย ความมีตัวตน หรืออิสรภาพ การระบุให้ชัดว่าเงินเป็น proxy ของอะไรสำหรับคุณ จะช่วยให้ตัดสินใจทางการเงินได้ตรงจุดกว่า',
+      real_example: 'Warren Buffett ยังคงอยู่บ้านหลังเดิมที่ซื้อตั้งแต่ปี 1958 และกินแฮมเบอร์เกอร์ McDonald\'s เป็นประจำ ไม่ใช่เพราะประหยัด แต่เพราะเขาเข้าใจว่าสิ่งที่เขาต้องการจริงๆ คือ "independence of thought" ไม่ใช่ lifestyle',
+      reflection: '"ความมั่งคั่งที่คุณกำลังสร้างอยู่ — มันเพื่อ freedom หรือเพื่อ validation?"'
+    },
+    {
+      question: 'เงินที่คุณใช้ไปครั้งล่าสุดแบบ "อยากได้" มากกว่า "ต้องการ" — มันซื้ออะไรให้คุณจริงๆ?',
+      perspective: 'นักเศรษฐศาสตร์พฤติกรรมพบว่ามนุษย์มักใช้เงินซื้อ "ความรู้สึก" มากกว่า "สิ่งของ" กระเป๋าแบรนด์เนมไม่ได้ซื้อเพราะทน แต่ซื้อเพราะความรู้สึกที่ได้มา\n\nปัญหาคือความรู้สึกเหล่านั้นมักเป็น temporary — นักจิตวิทยาเรียกว่า "hedonic adaptation" ร่างกายและจิตใจปรับตัวกลับสู่ baseline ได้เร็วมาก สิ่งที่ทำให้ตื่นเต้นวันนี้จะกลายเป็นเรื่องปกติในอีกไม่กี่สัปดาห์\n\nสิ่งที่ต้านทาน hedonic adaptation ได้ดีที่สุดคือ experiences ไม่ใช่ things และ relationships ไม่ใช่ status',
+      mental_model: '**Hedonic Adaptation Prevention (HAP):** เลือกใช้จ่ายกับสิ่งที่ต้านทาน adaptation ได้ดี เช่น experiences ใหม่ๆ การลงทุนใน time freedom และการให้ มากกว่า upgrading possessions',
+      real_example: 'Morgan Housel เขียนใน The Psychology of Money ว่า "The most important financial decision isn\'t which stock to pick, it\'s deciding what \'enough\' looks like for you" — คนที่ไม่รู้ว่า enough คืออะไร จะวิ่งหาเงินไม่มีวันหยุด',
+      reflection: '"ถ้าคุณไม่สามารถบอกคนอื่นว่าซื้ออะไรมา — คุณยังจะซื้ออยู่ไหม?"'
+    },
+    {
+      question: 'ความมั่งคั่งที่คุณสร้างอยู่ — คุณสร้างมันเพื่อ "อิสรภาพ" หรือเพื่อ "ไม่ต้องกลัว"?',
+      perspective: 'มีความแตกต่างพื้นฐานระหว่างการสร้างความมั่งคั่งจาก abundance mindset กับจาก scarcity mindset แม้ผลลัพธ์ภายนอกอาจดูเหมือนกัน แต่ process และ quality of life ระหว่างทางต่างกันมาก\n\nคนที่สร้างเงินเพราะกลัวความจน แม้จะรวยแล้วก็ยังกลัวอยู่ เพราะ baseline ของพวกเขาคือ threat ไม่ใช่ opportunity นักจิตวิทยาเรียกว่า "scarcity trap"\n\nในทางตรงข้าม คนที่ทำงานจาก "อยากสร้าง" มากกว่า "กลัวสูญเสีย" มักตัดสินใจได้ดีกว่าและมีความสุขมากกว่าในแต่ละวัน แม้จะยังมีเงินเท่ากัน',
+      mental_model: '**Abundance vs Scarcity Mindset in Finance:** ถามตัวเองว่าการตัดสินใจทางการเงินครั้งล่าสุด driven by "นี่คือโอกาสที่ฉันอยากคว้า" หรือ "ฉันต้องทำเพื่อไม่ให้เกิดเรื่องแย่" สองแรงขับนี้ให้ผลลัพธ์ต่างกันในระยะยาว',
+      real_example: 'Charlie Munger พูดว่า "I have nothing to add" ในหลาย Berkshire meeting — ไม่ใช่เพราะไม่มีความคิด แต่เพราะเขาไม่ได้ driven by need to prove himself อีกต่อไป ความมั่นคงภายในทำให้เขา act จาก strength ไม่ใช่ fear',
+      reflection: '"เมื่อคิดถึงเรื่องเงิน ความรู้สึกแรกที่เกิดขึ้นคือความตื่นเต้นหรือความกังวล?"'
+    },
+    {
+      question: 'คุณรู้จัก "พอ" ของตัวเองไหม — หรือเป้าหมายทางการเงินของคุณขยับออกไปทุกครั้งที่ใกล้ถึง?',
+      perspective: 'Hedonic treadmill ในโลกการเงินมีชื่อเฉพาะว่า "moving goalposts" — เราตั้งใจว่าพอมีเงิน X แล้วจะพอ แต่พอถึง X เราก็ตั้ง X+1 ใหม่ทันที\n\nนักเศรษฐศาสตร์ Richard Easterlin พบว่าประเทศที่รวยขึ้นโดยรวมไม่ได้มีความสุขมากขึ้น เพราะทุกคน compare กับคนรอบข้างที่รวยขึ้นพร้อมกัน\n\nการไม่รู้จัก "พอ" ไม่ใช่ความขยัน มันคือ anxiety ที่ถูก disguise ให้ดูเป็น ambition คนที่รู้จัก "พอ" ไม่ได้หยุดสร้าง แต่เขาสร้างจากความสมัครใจ ไม่ใช่ความกลัว',
+      mental_model: '**"Enough" Number:** นักวางแผนการเงิน Bill Perkins แนะนำให้ทุกคนคำนวณ "enough number" — จำนวนเงินที่จะทำให้ชีวิตที่ต้องการเป็นไปได้ แล้ว anything above นั้นคือ bonus ไม่ใช่ necessity',
+      reflection: '"ถ้าทรัพย์สินของคุณหยุดเพิ่มตั้งแต่วันนี้ — ชีวิตคุณจะดีพอไหม?"'},
+    {question:'เงินที่คุณมีตอนนี้ ซื้ออิสรภาพให้คุณได้จริงๆ ไหม หรือกลับสร้างกรงที่สวยงามกว่าเดิม?',perspective:'Nassim Taleb นิยาม "fuck-you money" ว่าเป็นเงินที่ทำให้คุณสามารถพูด no กับสิ่งที่ไม่ต้องการได้โดยไม่ต้องกลัวผลกระทบ — แต่ความน่าสนใจคือ threshold นั้นต่ำกว่าที่คนส่วนใหญ่คิดมาก\n\nปัญหาคือพอถึง threshold นั้น คนส่วนใหญ่ไม่หยุด แต่ขยาย lifestyle ให้สอดคล้องกับเงินที่มี สร้าง obligation ใหม่ที่ต้องการรายได้มากกว่าเดิม\n\nคนที่รู้จัก "freedom number" แตกต่างจากคนที่ไม่รู้ตรงที่พวกเขาสามารถตัดสินใจจากค่านิยม ไม่ใช่จากความกลัว',mental_model:'**Wealth Trap:** Lifestyle inflation คือกลไกที่ทำให้ความมั่งคั่งเพิ่มขึ้นแต่ความรู้สึก "free" ไม่เพิ่มตาม เพราะ obligation เพิ่มขึ้นพร้อมกัน การตั้ง "lifestyle ceiling" โดยเจตนาคือ counter-strategy',real_example:'Mr. Money Mustache (Pete Adeney) retire ตอนอายุ 30 ด้วยเงินไม่มาก เพราะเขาออกแบบชีวิตที่ต้องการน้อย แทนที่จะพยายามหาให้มากพอกับชีวิตที่ออกแบบมาใหญ่',reflection:'"อะไรในชีวิตคุณที่เงินซื้อแล้วกลับทำให้คุณ "ติด" มากกว่าอิสระ?"'},
+    {question:'ความสัมพันธ์ของคุณกับเงินเกิดขึ้นเมื่อตอนอายุเท่าไหร่ — และมันยังเหมาะสมกับชีวิตที่คุณมีตอนนี้ไหม?',perspective:'นักจิตวิทยาการเงิน Brad Klontz พบว่า "money scripts" — ความเชื่อเกี่ยวกับเงินที่ฝังลึก — ส่วนใหญ่เกิดขึ้นก่อนอายุ 10 ปี จากสิ่งที่เห็นและได้ยินในครอบครัว\n\n"เงินทำให้คนเปลี่ยน" "คนรวยไม่ใช่คนดี" "ต้องทำงานหนักเพื่อเงิน" เหล่านี้อาจเป็นความจริงในบริบทของวัยเด็ก แต่อาจเป็น limiting belief ในชีวิตผู้ใหญ่\n\nการไม่ตรวจสอบ money script คือการปล่อยให้ 7 ขวบข้างในตัวคุณตัดสินใจเรื่องเงินแทน',mental_model:'**Money Script Audit:** เขียน 5 ประโยคที่เกี่ยวกับเงินที่ได้ยินบ่อยในวัยเด็ก แล้วถามว่าแต่ละประโยคยังเป็นความจริงหรือ helpful สำหรับชีวิตตอนนี้ไหม ปรับที่ไม่เป็นจริงออก',real_example:'Oprah Winfrey เติบโตมาในความยากจน และเคยยอมรับว่า money anxiety ยังอยู่กับเธอแม้จะมีทรัพย์สินหลายพันล้าน เพราะ emotional script มีรากลึกกว่าตัวเลขในบัญชี',reflection:'"ความเชื่อเกี่ยวกับเงินที่คุณมีในตอนนี้ — คุณเลือกมันเอง หรือมันถูก install ไว้ก่อนที่คุณจะรู้ตัว?"'},
+    {question:'ถ้าคุณสูญเสียทุกอย่างที่มีตอนนี้ไปวันนี้ — คุณจะสร้างกลับมาได้ไหม และนั่นบอกอะไรเกี่ยวกับแหล่งที่มาของความมั่งคั่งที่แท้จริงของคุณ?',perspective:'Warren Buffett เคยพูดว่า "If you took away all of Warren Buffett\'s assets, give him back $100k in a few years he\'d be rich again" — เพราะความมั่งคั่งที่แท้จริงไม่ได้อยู่ในทรัพย์สิน แต่อยู่ใน "ability to create value"\n\nสิ่งที่น่าคิดคือหลายคนสะสมทรัพย์สินโดยไม่ได้ develop underlying skill ที่ทำให้เกิดทรัพย์สินนั้น พอทรัพย์สินหายไป ความสามารถในการสร้างกลับมาก็ไม่มี\n\nReal wealth คือ human capital — ความรู้ เครือข่าย ทักษะ และ judgment ที่สะสมมา ไม่ใช่แค่ตัวเลขในบัญชี',mental_model:'**Human Capital vs Financial Capital:** Financial capital คือผลลัพธ์ Human capital คือ generator เมื่อ invest ใน human capital มันสร้าง financial capital ต่อไปได้เรื่อยๆ',real_example:'Nick Leeson นักเทรดที่ทำให้ Barings Bank ล้มละลายใน 1995 สูญเสียทุกอย่าง แต่ Paul Volcker ที่ผ่านวิกฤตเศรษฐกิจหลายรอบยังคงสร้าง value ต่อได้ เพราะมันอยู่ที่ judgment ไม่ใช่ตำแหน่ง',reflection:'"ถ้าต้องเริ่มใหม่จาก 0 วันพรุ่งนี้ — คุณจะเริ่มจากอะไรก่อน และนั่นบอกว่าคุณ value อะไรมากที่สุด?"'},
+    {question:'คุณ charge ค่าตัวเองเท่าที่คุณคิดว่าตัวเองคุ้ม หรือเท่าที่คิดว่าคนอื่นจะยอมจ่าย?',perspective:'Pricing psychology แสดงว่า undercharging ไม่ได้แค่ทำให้รายได้น้อยลง แต่ยังส่งสัญญาณเรื่อง perceived value ด้วย คนมักประเมินราคาของบริการจากราคาที่ charge ไม่ใช่จาก objective quality\n\nการ underprice ตัวเองมักมาจาก 2 สาเหตุ — ความกลัวการถูกปฏิเสธ หรือ imposter syndrome ที่ทำให้รู้สึกว่าตัวเองไม่คุ้มราคาที่สูงกว่านี้\n\nทั้งสองสาเหตุเป็นปัญหา self-worth ที่ disguise ตัวเป็นปัญหา business strategy',mental_model:'**Price as Signal:** ราคาที่คุณ charge สะท้อน self-worth ที่คุณมีต่อตัวเอง ไม่ใช่แค่ market rate ลอง charge 20% มากกว่าที่รู้สึกว่า "พอเหมาะ" แล้วสังเกตว่า discomfort ที่รู้สึกมาจากไหน',real_example:'Sara Blakely ผู้ก่อตั้ง Spanx เติบโตมาในครอบครัวที่พ่อถามทุกเย็นว่า "วันนี้ fail อะไรบ้าง?" เพราะเขาเชื่อว่าการ fail คือการพยายาม ทัศนคตินั้นทำให้เธอกล้าตั้งราคาและ value ตัวเองในแบบที่คนอื่นไม่กล้า',reflection:'"ครั้งล่าสุดที่คุณขอให้สูงกว่าที่รู้สึกสบายใจ — เกิดอะไรขึ้น?"'},
+    {question:'ถ้าเงินไม่ใช่ข้อจำกัด — คุณจะยังทำงานเดิมอยู่ไหม?',perspective:'คำถามนี้ไม่ได้ถามว่าคุณควรเลิกงาน แต่ถามว่าแรงขับที่ทำให้คุณทำงานคืออะไรจริงๆ\n\nถ้าคำตอบคือ "ใช่ ฉันยังทำ" — นั่นเป็นสัญญาณที่ดีมาก คุณกำลังทำงานที่ aligned กับตัวเอง\n\nถ้าคำตอบคือ "ไม่ ฉันจะหยุด" — นั่นไม่ใช่ปัญหาของงาน แต่อาจเป็น signal ว่ามีบางอย่างที่คุณต้องการแต่ยังไม่ได้รับจากชีวิต และคุณใช้งาน (และเงิน) เป็นแค่ proxy',mental_model:'**Ikigai Lens on Work:** ตัดมิติ "ได้รับเงิน" ออกชั่วคราว แล้วถามว่างานที่ทำ 1) คุณรักมันไหม? 2) คุณเก่งมันไหม? 3) โลกต้องการมันไหม? สามอย่างนั้นคือ intersection ที่ work มีความหมาย',real_example:'Pablo Picasso ทำงานจนอายุ 91 ปี ไม่ใช่เพราะต้องการเงิน แต่เพราะเขาบอกว่า "The purpose of art is washing the dust of daily life off our souls" งานคือ identity ของเขา ไม่ใช่แค่รายได้',reflection:'"ถ้าพรุ่งนี้เงินไม่ใช่เหตุผล — คุณจะตื่นขึ้นมาทำอะไร?"'}
+  ],
+  psychology: [
+    {
+      question: 'พฤติกรรมที่คุณเกลียดที่สุดในคนอื่น — มีส่วนไหนที่ซ่อนอยู่ในตัวคุณบ้างไหม?',
+      perspective: 'Carl Jung เรียกสิ่งนี้ว่า "projection" — เรามักจะรับรู้ในคนอื่นในสิ่งที่เราปฏิเสธในตัวเอง สิ่งที่ทำให้เรา trigger มากที่สุดมักเป็น mirror ของ shadow ของเราเอง\n\nไม่ได้หมายความว่าคนที่คุณเกลียดไม่ได้ทำอะไรผิด แต่ intensity ของความรู้สึกนั้นมักบอกว่ามันสัมพันธ์กับบางอย่างในตัวคุณด้วย\n\nการทำ shadow work ไม่ใช่การโทษตัวเอง แต่คือการ recognize ว่าสิ่งที่เราปฏิเสธในตัวเองไม่ได้หายไปไหน มันแค่ซ่อนอยู่ใต้ผิวของ persona ที่เราสร้างขึ้น',
+      mental_model: '**Shadow Self (Jung):** ส่วนของบุคลิกที่เราซ่อน ปฏิเสธ หรือไม่ยอมรับ มักแสดงออกผ่านการ project ไปยังคนอื่น การรู้จัก shadow ไม่ใช่การ embrace มัน แต่คือการไม่ให้มันควบคุมเราโดยที่เราไม่รู้ตัว',
+      real_example: 'นักธุรกิจที่วิจารณ์คู่แข่งว่า "โลภเกินไป" มักซ่อนแรงขับเรื่องเงินในตัวเองที่ยังไม่ได้รับการยอมรับ การ project ช่วยให้รู้สึก morally superior โดยไม่ต้องเผชิญกับตัวเอง',
+      reflection: '"คนที่ทำให้คุณโกรธที่สุดในชีวิตนี้ — พวกเขาสะท้อนอะไรให้คุณเห็นในตัวเอง?"'
+    },
+    {
+      question: 'ถ้า "ตัวตน" ของคุณสร้างขึ้นจากประสบการณ์และสภาพแวดล้อม — แล้วอะไรคือสิ่งที่เป็น "คุณ" จริงๆ?',
+      perspective: 'นักปรัชญาและนักจิตวิทยาถกเถียงเรื่องนี้มาหลายศตวรรษ แต่สิ่งที่ neuroscience พบคือ "self" ที่เราคิดว่าแน่วแน่และต่อเนื่องนั้น จริงๆ แล้วเป็น narrative ที่สมองสร้างขึ้นอย่างต่อเนื่องเพื่อให้รู้สึกว่ามีความสอดคล้อง\n\nที่น่าสนใจคือคนที่ยึดติดกับ fixed identity มักปรับตัวและเรียนรู้ได้ยากกว่า เพราะทุก challenge กลายเป็นการโจมตี "ตัวตน" แทนที่จะเป็นแค่ข้อมูล\n\nCarol Dweck เรียกคนที่มี fluid identity ว่ามี "growth mindset" แต่จริงๆ มันลึกกว่านั้น — มันคือการไม่ผูกติดคุณค่าของตัวเองกับ label ใดๆ',
+      mental_model: '**Identity Flexibility:** แทนที่จะนิยามตัวเองด้วย noun ("ฉันเป็นคนขี้อาย") ลองใช้ verb ("ฉันมีแนวโน้มจะเงียบในสถานการณ์ใหม่") Noun ปิดตาย Verb เปิดการเปลี่ยนแปลง',
+      real_example: 'Elon Musk เปลี่ยนจาก software (PayPal) → space (SpaceX) → cars (Tesla) → tunnels (Boring Company) โดยไม่ติดกับ identity "ฉันเป็นคนทำ software" ความสามารถในการ redefine ตัวเองคือ competitive advantage ของเขา',
+      reflection: '"ถ้าลบ title งาน ครอบครัว และความสำเร็จในอดีตออกไปหมด — คุณจะนิยาย \'คุณ\' ว่าอะไร?"'
+    },
+    {
+      question: 'ความสำเร็จที่คุณภาคภูมิใจมากที่สุด — มันมาจาก "ความต้องการจริงๆ" หรือจาก "ความกลัวที่จะเป็นคนธรรมดา"?',
+      perspective: 'นักจิตวิทยา Alfred Adler เชื่อว่าแรงขับหลักของมนุษย์ไม่ใช่ความสุขหรือความอยู่รอด แต่คือ "will to power" — ความต้องการที่จะรู้สึกว่าตัวเองมีความสามารถและมีคุณค่า\n\nปัญหาคือเส้นแบ่งระหว่าง healthy ambition กับ fear-driven overachievement บางมาก คนที่ถูกขับเคลื่อนด้วยความกลัวมักทำงานได้มากกว่า แต่ satisfy น้อยกว่า เพราะทุก achievement คือการหลีกหนีความรู้สึกไม่พอ ไม่ใช่การสร้างจากความพอ\n\nคำถามที่น่าสนใจคือ "ถ้าไม่มีใครรู้ว่าคุณทำสิ่งนี้ได้ — คุณยังอยากทำอยู่ไหม?"',
+      mental_model: '**Intrinsic vs Extrinsic Motivation:** งานวิจัยของ Deci และ Ryan พบว่า motivation ที่ยั่งยืนและ fulfilling มาจาก autonomy, mastery และ purpose — ไม่ใช่จากการได้รับการยอมรับหรือหลีกเลี่ยงการถูกตัดสิน',
+      real_example: 'Richard Feynman นักฟิสิกส์ผู้ได้ Nobel Prize มักพูดว่าเขา solve ปัญหาเพราะ "มันสนุก" ไม่ใช่เพราะต้องการ recognition การ detach จาก outcome ทำให้เขาทำงานที่ revolutionary ได้โดยไม่กลัวการล้มเหลว',
+      reflection: '"อะไรคือสิ่งที่คุณทำแม้ไม่มีใครดู ไม่มีใครชม และไม่มีใครรู้?"'
+    },
+    {
+      question: 'คุณเคยทำสิ่งที่รู้อยู่แก่ใจว่าผิดสำหรับตัวเอง แต่ก็ยังทำซ้ำๆ — อะไรทำให้ความรู้กับการกระทำไม่ตรงกัน?',
+      perspective: 'นักจิตวิทยาเรียกช่องว่างนี้ว่า "intention-action gap" — เรารู้ว่าควรออกกำลังกาย กินอาหารดี นอนพักผ่อน แต่ก็ยังไม่ทำ ไม่ใช่เพราะโง่ แต่เพราะสมองมี 2 ระบบที่ทำงานแข่งกัน\n\nSystem 1 คือ automatic, emotional, fast — มันขับเคลื่อนพฤติกรรมส่วนใหญ่ในชีวิตประจำวัน System 2 คือ rational, slow — มันรู้ว่าอะไรดีแต่มักแพ้เมื่อเจอ immediate gratification\n\nการเปลี่ยนพฤติกรรมที่ได้ผลไม่ใช่การ "พยายามมากขึ้น" แต่คือการออกแบบสภาพแวดล้อมให้ System 1 เลือกสิ่งที่ดีโดยอัตโนมัติ',
+      mental_model: '**Environment Design:** BJ Fogg พบว่าการเปลี่ยน environment มีผลต่อพฤติกรรมมากกว่าการ "ตั้งใจ" หลายเท่า วางรองเท้าวิ่งไว้หน้าเตียง ดีกว่าตั้งใจ 100 ครั้งว่าจะออกกำลังกาย',
+      reflection: '"พฤติกรรมที่คุณรู้ว่าควรเปลี่ยนแต่ยังไม่เปลี่ยน — สภาพแวดล้อมรอบตัวคุณสนับสนุนหรือขัดขวางการเปลี่ยนนั้น?"'},
+    {question:'เรื่องที่คุณยืนยันซ้ำๆ ว่า "นั่นคือตัวฉัน" — มันเป็นความจริงหรือเป็นแค่นิสัยที่ทำซ้ำจนเชื่อ?',perspective:'Neuroscience แสดงว่าสมองทำงานบน "predictive processing" — มันพยายาม predict สิ่งที่จะเกิดขึ้นจากประสบการณ์ในอดีต และสร้าง narrative เกี่ยวกับตัวเราเพื่อให้ prediction แม่นขึ้น\n\nปัญหาคือ narrative เหล่านั้นถูกสร้างจากข้อมูลในอดีต ไม่ใช่ความเป็นไปได้ในอนาคต "ฉันเป็นคนขี้อาย" "ฉันไม่ถนัดตัวเลข" "ฉันไม่ได้เก่งเรื่องความสัมพันธ์" อาจเป็นแค่ pattern ที่ทำซ้ำจนแข็งแกร่ง ไม่ใช่ identity ที่แท้จริง\n\nDweck พบว่าคนที่มอง trait ว่าเป็น fixed มีแนวโน้มไม่พัฒนา แต่คนที่มองว่า malleable จะ invest ในการเปลี่ยน',mental_model:'**Narrative Identity Theory:** ตัวตนของเราคือ story ที่เราเล่าเกี่ยวกับตัวเอง stories สามารถเขียนใหม่ได้ แต่ต้องการ awareness ก่อนว่า story ปัจจุบันคืออะไร และมันช่วยหรือขัดขวางเรา',real_example:'Malala Yousafzai ปฏิเสธ narrative ที่สังคมเขียนให้ว่า "เด็กผู้หญิงในปากีสถานไม่ควรเรียนหนังสือ" และเขียน narrative ใหม่ว่าตัวเองเป็น advocate เรื่องการศึกษา ต้านทานทั้งการขู่ฆ่าและ social pressure',reflection:'"Label ที่คุณใช้อธิบายตัวเองมากที่สุด — คุณเลือกมันหรือมันถูกสร้างขึ้นมาโดยที่คุณไม่รู้ตัว?"'},
+    {question:'ถ้าคุณดูพฤติกรรมของตัวเองเหมือนดูคนอื่น — คุณจะวิเคราะห์ว่าอะไรคือ driving force ของชีวิตคุณ?',perspective:'เราเก่งมากในการวิเคราะห์แรงจูงใจของคนอื่น แต่มักมี blind spot เรื่องแรงจูงใจของตัวเอง เพราะเรา rationalize พฤติกรรมของตัวเองอยู่เสมอ\n\nJonathan Haidt เรียก rational mind ว่าเป็น "elephant rider" — เราคิดว่าเราควบคุมทิศทาง แต่จริงๆ ช้างคือ emotion และ instinct ที่ขับเคลื่อนอยู่ใต้\n\nการ step back แล้วดูตัวเองแบบ third-person ทำให้มองเห็น pattern ที่ยากจะเห็นเมื่ออยู่ใน first-person',mental_model:'**Self-Distancing:** เมื่อต้องการ self-reflect ลองเขียนหรือคิดเกี่ยวกับตัวเองในมุมมองที่ 3 ใช้ชื่อตัวเองแทน "ฉัน" — "ชญาดา กำลังรู้สึก..." งานวิจัยพบว่า self-distancing ลด emotional reactivity และเพิ่ม clarity',real_example:'Adam Grant ศาสตราจารย์จาก Wharton เขียนว่าเขาเป็น "Giver" แต่ต้องเรียนรู้ที่จะ set boundary เพราะ Givers ที่ไม่มี boundary มักกลายเป็น doormats ที่ผู้อื่นใช้ประโยชน์โดยไม่ตั้งใจ',reflection:'"ถ้าเพื่อนคุณวิเคราะห์ pattern ชีวิตคุณแบบ unbiased — พวกเขาจะพบว่าคุณ avoid อะไรอยู่?"'},
+    {question:'บาดแผลในวัยเด็กที่คุณยังไม่เคยพูดถึงกับใครเลย — มันยังส่งผลต่อการตัดสินใจของคุณอยู่ไหม?',perspective:'Adverse Childhood Experiences (ACEs) study พบว่าประสบการณ์เลวร้ายในวัยเด็กส่งผลต่อสุขภาพกาย จิตใจ และพฤติกรรมในวัยผู้ใหญ่อย่างมีนัยสำคัญ ไม่ว่าจะผ่านมานานแค่ไหนแล้ว\n\nแต่ที่น่าสนใจกว่าคือ "post-traumatic growth" — คนที่ process และ integrate ประสบการณ์ยากๆ ได้ มักพัฒนา resilience empathy และ wisdom ที่ลึกกว่าคนที่ไม่เคยผ่านความยาก\n\nคำถามไม่ใช่ว่า "เกิดอะไรขึ้นกับคุณ?" แต่คือ "คุณทำอะไรกับสิ่งที่เกิดขึ้น?"',mental_model:'**Window of Tolerance:** ประสบการณ์ยากๆ สามารถ process ได้เมื่ออยู่ใน "window" ที่ไม่ too overwhelming และไม่ too numbed คนที่เรียนรู้จากอดีตได้คือคนที่รู้จักขยาย window นั้นทีละนิด',real_example:'Oprah Winfrey เติบโตมาท่ามกลางความยากจนและการถูกทารุณ เธอไม่ได้แค่รอด แต่ใช้ประสบการณ์นั้นเป็นแหล่งของ empathy และ purpose ที่ทำให้เธอเชื่อมต่อกับผู้คนได้ลึกมาก',reflection:'"มีประสบการณ์ในอดีตที่คุณยังไม่เคย "แก้ไข" อย่างจริงจัง — และมันยังปรากฏในชีวิตปัจจุบันของคุณในรูปแบบไหน?"'},
+    {question:'ความสำเร็จที่ผู้คนยกย่องคุณมากที่สุด — ตรงกับสิ่งที่คุณภาคภูมิใจในตัวเองจริงๆ ไหม?',perspective:'มีช่องว่างที่น่าสนใจระหว่าง "external validation" และ "internal satisfaction" คนที่ประสบความสำเร็จมากมักถูกชื่นชมในสิ่งที่พวกเขาทำ แต่ what people admire ≠ what brings you alive\n\nนักจิตวิทยา Nathaniel Branden เรียก self-esteem แท้จริงว่า "confidence in our ability to think" และ "confidence that we are worthy of happiness" — ทั้งสองอย่างเป็น internal ไม่ใช่ external\n\nคนที่ rely on external validation มักพบว่าทุก achievement ให้ความพอใจน้อยลงเรื่อยๆ เพราะแหล่งของ self-worth อยู่นอกตัว',mental_model:'**Internal vs External Locus of Self-Worth:** ถามว่า "ฉันรู้สึก good about myself เพราะอะไร?" ถ้าคำตอบส่วนใหญ่เป็น external (ตำแหน่ง รายได้ คำชม) นั่นคือ fragile self-worth ที่ collapse ได้เมื่อสิ่งเหล่านั้นหายไป',real_example:'Michael Jordan หลังจาก retire ครั้งแรก เล่าว่าตัวตนของเขาผูกติดกับบาสเกตบอลมากจนเมื่อไม่มีมันเขาไม่รู้ว่าตัวเองคือใคร — journey ของเขาคือการค้นหา identity ที่ไม่ขึ้นอยู่กับ performance',reflection:'"ถ้าเอาความสำเร็จและ achievement ทั้งหมดออกไป — คุณยังชอบตัวเองอยู่ไหม?"'},
+    {question:'คุณใช้คำว่า "ขอโทษ" บ่อยเกินไป หรือน้อยเกินไป — และนั่นบอกอะไรเกี่ยวกับความสัมพันธ์ของคุณกับความผิดพลาด?',perspective:'มี 2 extreme ที่น่าคิด — คนที่ขอโทษทุกอย่าง (แม้ไม่ใช่ความผิดของตัวเอง) มักมี anxious attachment และ people-pleasing pattern ในขณะที่คนที่ขอโทษยากมากมักมีความกลัวความเปราะบางหรือความเชื่อว่าการยอมรับผิดคือความอ่อนแอ\n\nการขอโทษที่แท้จริงต้องการทั้ง 3 องค์ประกอบ — ยอมรับว่าทำผิด เข้าใจว่าส่งผลกระทบอะไร และมีแผนจะไม่ทำซ้ำ\n\nหลายคนขอโทษแบบ performative เพื่อจบการสนทนา ไม่ใช่เพื่อ repair ความสัมพันธ์',mental_model:'**Authentic Apology Framework:** ขอโทษที่แท้จริงมี 3 ส่วน: 1) ยอมรับพฤติกรรมที่เฉพาะเจาะจง (ไม่ใช่แค่ "ถ้าทำให้เจ็บปวด") 2) แสดงว่าเข้าใจผลกระทบ 3) แสดงความตั้งใจที่จะเปลี่ยน',real_example:'Ray Dalio สร้าง culture ที่เรียกว่า "radical transparency" ที่ Bridgewater ซึ่งทุกคนรวมถึงตัวเขาเองถูก critique อย่างตรงไปตรงมา เพราะเขาเชื่อว่าการยอมรับความผิดพลาดเร็วคือ competitive advantage',reflection:'"ความผิดพลาดล่าสุดที่คุณยังไม่ได้ขอโทษหรือยังไม่ได้ตัดสินใจแก้ไข — คุณกำลังรอสิ่งใดอยู่?"'}
+  ],
+  relationships: [
+    {
+      question: 'ในความสัมพันธ์ที่ใกล้ชิดที่สุดของคุณ — คุณกำลังรักคนนั้น หรือกำลังรักภาพที่คุณสร้างขึ้นเกี่ยวกับเขา?',
+      perspective: 'นักจิตวิทยาเรียกปรากฏการณ์นี้ว่า "idealization" — เราตกหลุมรักกับ projected image ของคนๆ หนึ่งมากกว่าตัวบุคคลจริงๆ ในระยะแรกของความสัมพันธ์ oxytocin ทำให้สมองมองเห็นแต่สิ่งดี\n\nปัญหาเกิดขึ้นเมื่อความเป็นจริงของบุคคลนั้นเริ่มไม่ตรงกับภาพที่สร้างไว้ หลายคนเรียกช่วงนี้ว่า "หมดรัก" แต่จริงๆ อาจเป็นการ "เพิ่งเริ่มรู้จักกัน" ต่างหาก\n\nความรักที่โตและลึกคือความรักที่เห็นข้อบกพร่องและยังเลือกอยู่ ไม่ใช่ความรักที่ยังไม่เคยเห็นความจริง',
+      mental_model: '**Limerence vs Love:** Limerence คือสภาวะ obsession ที่มาพร้อมกับการ idealize อีกฝ่าย Love ที่แท้จริงต้องการเวลาและ reality — มันเริ่มต้นหลังจาก limerence เริ่มจางลง',
+      real_example: 'Esther Perel นักบำบัดความสัมพันธ์ระดับโลก บอกว่า "The quality of our relationships determines the quality of our lives" แต่เธอยังบอกอีกว่าปัญหาหลักของคู่รักสมัยใหม่คือการ expect ให้คนๆ เดียวตอบสนองทุกความต้องการ ซึ่งเป็นความกดดันที่ไม่เคยมีในรุ่นก่อน',
+      reflection: '"ในความสัมพันธ์ที่สำคัญที่สุดของคุณ — คุณกำลังรัก \'คนนั้น\' หรือ \'ความรู้สึกที่คุณได้จากเขา\'?"'
+    },
+    {
+      question: 'คุณเคยถามตัวเองไหมว่า ทำไมถึงเลือกคนแบบเดิมๆ เข้ามาในชีวิตซ้ำๆ?',
+      perspective: 'นักจิตวิทยา Harville Hendrix พบว่าคนส่วนใหญ่ไม่ได้เลือกคู่รักหรือพาร์ทเนอร์ธุรกิจแบบ rational แต่ถูกดึงดูดโดย "imago" — composite image ของบุคคลที่มีอิทธิพลต่อเราในวัยเด็ก\n\nเราอาจโกรธพ่อที่ไม่เคยแสดงความรู้สึก แต่แล้วก็แต่งงานกับคนที่มีลักษณะเดียวกัน เพราะสมองพยายาม "รักษาบาดแผลเก่า" ผ่านความสัมพันธ์ใหม่\n\nนี่ไม่ใช่ weakness แต่คือกลไกที่ทุกคนมี การรู้จักรูปแบบนี้คือจุดเริ่มต้นของการเลือกอย่างมีสติ แทนที่จะถูก pattern เก่าๆ ควบคุม',
+      mental_model: '**Repetition Compulsion:** แนวโน้มของมนุษย์ที่จะสร้าง scenario คล้ายกับบาดแผลในอดีตซ้ำๆ โดยไม่รู้ตัว การรู้จัก pattern ของตัวเองคือก้าวแรกที่สำคัญที่สุดก่อนจะเปลี่ยนมัน',
+      real_example: 'Jeff Bezos เคยพูดถึงการที่ตัวเองต้องทำงานหนักเพื่อพิสูจน์คุณค่า — เขาต่อมาตระหนักว่ามันผูกกับความสัมพันธ์กับพ่อเลี้ยงที่ไม่ได้รับการยอมรับในวัยเด็ก การรู้จัก wound ทำให้เขา manage ตัวเองได้ดีขึ้นในฐานะผู้นำ',
+      reflection: '"รูปแบบความสัมพันธ์ที่คุณอยากเปลี่ยนที่สุด — มันเริ่มต้นมาจากที่ไหน?"'
+    },
+    {
+      question: 'คนที่คุณรู้สึกว่า "เข้าใจคุณจริงๆ" มีกี่คน — และคุณให้โอกาสตัวเองถูกเข้าใจมากพอไหม?',
+      perspective: 'Brené Brown พบจากการวิจัยกว่า 20 ปีว่า ความ loneliness ที่ลึกที่สุดไม่ใช่การไม่มีคนอยู่ด้วย แต่คือการมีคนอยู่รอบข้างแต่ยังรู้สึกว่าไม่มีใครเห็น "ตัวเอง" จริงๆ\n\nสาเหตุหลักไม่ใช่ว่าคนอื่นไม่ใส่ใจ แต่คือเราไม่ยอม "show up" จริงๆ เราแสดงเวอร์ชั่นที่ปลอดภัย เวอร์ชั่นที่คิดว่าคนอื่นจะยอมรับ แทนที่จะเป็นตัวเองจริงๆ\n\nVulnerability ที่แท้จริงไม่ใช่การ share ทุกเรื่อง แต่คือการยอมให้คนที่คุณเลือกได้เห็นส่วนที่คุณยังไม่แน่ใจว่าพวกเขาจะยอมรับ',
+      mental_model: '**Vulnerability Loop:** การเปิดเผยตัวเองเล็กน้อยสร้าง trust เล็กน้อย trust นั้นสร้างพื้นที่ให้เปิดเผยมากขึ้น ความสัมพันธ์ที่ลึกสร้างจาก loop นี้ ไม่ใช่จาก grand gesture',
+      real_example: 'การวิจัย "Grant Study" ที่ Harvard ติดตามคนกว่า 700 คนเป็นเวลา 80 ปี สรุปว่า predictor อันดับ 1 ของ happiness และ longevity คือ quality of close relationships — ไม่ใช่ความสำเร็จ เงิน หรือสุขภาพ',
+      reflection: '"มีคนในชีวิตคุณที่คุณอยากให้เข้าใจคุณมากกว่านี้ แต่คุณยังไม่เคยบอกจริงๆ ว่าคุณรู้สึกอะไร?"'
+    },
+    {
+      question: 'ในความสัมพันธ์ที่ยากที่สุดในชีวิตคุณ — คุณมีส่วนสร้างความยากนั้นอย่างไรบ้าง?',
+      perspective: 'เราเก่งมากในการมองเห็นความผิดของอีกฝ่าย แต่มักเป็น blind spot ต่อบทบาทของตัวเองในปัญหา ไม่ใช่เพราะเราโกหกตัวเอง แต่เพราะสมองมี confirmation bias ที่ทำให้เห็น evidence ที่สนับสนุน narrative ของเราเอง\n\nนักบำบัดความสัมพันธ์พบว่าแทบทุกความขัดแย้งที่ดูเหมือน "ฝ่ายหนึ่งผิด" มักเป็น co-created dynamic ที่ทั้งสองฝ่ายมีส่วนในแบบที่ไม่เท่ากันแต่มีอยู่จริง\n\nการถามว่า "ฉันมีส่วนอย่างไร?" ไม่ใช่การโทษตัวเอง แต่คือการเอาอำนาจกลับมาที่ตัวเอง เพราะสิ่งที่เราทำได้ คือเปลี่ยนตัวเอง',
+      mental_model: '**Circular Causality:** ในระบบความสัมพันธ์ พฤติกรรม A ของคุณก่อให้เกิด B ของเขา แล้ว B ก็ก่อให้เกิด A ของคุณต่อไปเรื่อยๆ การตัด loop ทำได้โดยเปลี่ยน A ของตัวเอง ไม่ใช่รอให้เขาเปลี่ยน B',
+      reflection: '"ถ้าคนที่ขัดแย้งกับคุณมากที่สุดได้อธิบาย pattern ของคุณ — เขาจะพูดว่าอะไร?"'},
+    {question:'คุณกำลังมองหา "คนที่ใช่" หรือกำลัง "เป็นคนที่ใช่" สำหรับความสัมพันธ์ที่คุณต้องการ?',perspective:'วัฒนธรรม dating สมัยใหม่ฝึกให้เราเป็น "evaluators" — ประเมินว่าคนอื่นเป็น right fit ไหม แต่ไม่ค่อยถามว่าเราเองกำลัง bring อะไรมาใส่ความสัมพันธ์\n\nAlain de Botton บอกว่าเราถูกสอนให้ "find the right person" แต่ไม่ได้ถูกสอนให้ "be a good partner" ซึ่งเป็น skill ที่ต้องพัฒนาอย่างตั้งใจ\n\nความสัมพันธ์ที่ดีไม่ใช่ product ของการ "ได้คนที่ใช่" แต่เป็นผลลัพธ์ของ 2 คนที่ตั้งใจ "เป็นคนที่ใช่" ให้กันและกัน',mental_model:'**Readiness vs Right Person:** แทนที่จะถามว่า "เขาหรือเธอเหมาะกับฉันไหม?" ลองถามว่า "ฉันกำลังเป็นพาร์ทเนอร์แบบไหนอยู่?" และ "สิ่งที่ฉัน avoid หรือ bring ในความสัมพันธ์คืออะไร?"',real_example:'งานวิจัย Gottman Institute ศึกษาคู่สมรสกว่า 3,000 คู่เป็นเวลา 40 ปี พบว่าปัจจัยที่ทำนาย successful relationship ได้ดีที่สุดไม่ใช่ compatibility แต่คือ "positive sentiment override" — การมอง partner ด้วย goodwill โดย default',reflection:'"ในความสัมพันธ์ที่สำคัญ — คุณ bring energy แบบไหนมาส่วนใหญ่?"'},
+    {question:'ขอบเขต (boundary) ที่คุณมีในความสัมพันธ์ — มันมาจากการ "รู้จักตัวเอง" หรือมาจากการ "ป้องกันตัวเองจากความเจ็บปวด"?',perspective:'Brené Brown แยกความแตกต่างระหว่าง boundaries ที่มาจาก clarity กับ walls ที่มาจาก fear — ทั้งสองดูเหมือนกันจากภายนอก แต่ purpose ต่างกันมาก\n\nBoundary ที่แท้จริงคือ "ฉันไม่ทำสิ่งนี้เพราะมัน violate ค่านิยมของฉัน" Wall คือ "ฉันไม่ให้ใครเข้ามาใกล้เพราะกลัวเจ็บปวด"\n\nคนที่ใช้ boundary เพื่อป้องกันตัวเองมักพบว่าพวกเขา safe แต่ไม่ intimate และ secure แต่ไม่ connected',mental_model:'**Clarity-Based Boundaries:** ก่อนปฏิเสธ request จากคนที่รักถามว่า "ฉัน say no เพราะมันขัดกับ values ของฉัน หรือเพราะกลัวบางอย่าง?" คำตอบนั้นบอกว่าต้องปรับ boundary หรือ courage',real_example:'Alanis Morissette เคยเล่าว่าต้องใช้เวลานานมากในการเรียนรู้ว่าการ say yes กับทุกอย่างไม่ใช่ความใจกว้าง แต่คือการขาด self-respect — turning point คือตอนที่เธอตระหนักว่า "ฉันไม่ต้องการคนที่ treat ฉันดีเพราะ condition เท่านั้น"',reflection:'"Boundary ที่คุณต้องการ set มากที่สุดตอนนี้ — คุณเกรงกลัวอะไรถ้าต้อง set มัน?"'},
+    {question:'ความเงียบที่เกิดขึ้นระหว่างคุณกับคนสำคัญในชีวิต — มันคือ comfortable silence หรือ silence ที่หลีกเลี่ยงบางเรื่อง?',perspective:'John Gottman นักวิจัยด้านความสัมพันธ์บอกว่า couple ที่มีปัญหาสื่อสารมักมี "Diffuse Physiological Arousal" — สภาวะที่ร่างกายอยู่ใน defensive mode เมื่ออยู่กับคู่รัก ทำให้เลี่ยงการคุยบางเรื่อง\n\nความเงียบมี 2 แบบ — silence of safety (เราสบายใจพอที่จะไม่ต้องพูดตลอดเวลา) และ silence of avoidance (เราเงียบเพราะกลัวว่าถ้าพูดจะ escalate)\n\nปัญหาคือทั้งสองดูเหมือนกันจากภายนอก แต่ให้ผลลัพธ์ต่างกันมากในระยะยาว',mental_model:'**The Iceberg of Unspoken:** สิ่งที่ไม่ถูกพูดในความสัมพันธ์มักสะสมเป็น resentment นักบำบัดเรียกว่า "the elephant in the room" ที่ทุกคนรู้ว่ามีแต่ไม่มีใครพูดถึง การ name มันออกมาแม้จะ uncomfortable มักดีกว่าการ avoid',real_example:'Esther Perel บอกว่าความสัมพันธ์ที่ healthy ไม่ใช่ความสัมพันธ์ที่ไม่มีความขัดแย้ง แต่คือความสัมพันธ์ที่มีวิธีจัดการความขัดแย้งได้อย่าง constructive — ซึ่งต้องการ psychological safety',reflection:'"มีเรื่องที่คุณอยากพูดกับคนที่รักแต่ยังไม่ได้พูด — อะไรที่ทำให้คุณยังไม่พูด?"'},
+    {question:'คุณ "ให้" ในความสัมพันธ์เพราะรัก หรือเพราะกลัวว่าถ้าไม่ให้แล้วจะเกิดอะไร?',perspective:'Adam Grant แบ่งคนออกเป็น Givers, Takers, และ Matchers Givers ที่มี self-awareness สูงมักประสบความสำเร็จมากที่สุด แต่ Givers ที่ให้จากความกลัวมักกลายเป็น exhausted และ resentful\n\nความแตกต่างระหว่าง "ให้จากความอุดมสมบูรณ์" กับ "ให้จากความกลัว" อยู่ที่ว่าการให้นั้น sustainable ไหม และมี boundaries ไหม\n\nคนที่ให้เพราะกลัวมักรู้สึกว่าตัวเองไม่มีทางเลือก ซึ่งสร้าง resentment ที่สะสมและทำลาย relationship ในระยะยาว',mental_model:'**Otherish Giving:** Grant แนะนำให้ give จาก "otherish" stance — ดูแลคนอื่นแต่ก็ดูแลตัวเองด้วย ไม่ใช่ selfless (จนหมดไฟ) และไม่ใช่ selfish (จนไม่ care คนอื่น)',real_example:'Fred Rogers เป็นตัวอย่างที่ดีของ otherish giving — เขาให้ emotional presence กับเด็กหลายล้านคน แต่เขาดูแลตัวเองด้วยการว่ายน้ำทุกเช้า ปฏิบัติธรรม และ maintain friendships ที่ deep',reflection:'"ความสัมพันธ์ที่คุณรู้สึก drained มากที่สุด — คุณยังอยู่เพราะรักหรือเพราะรู้สึกว่าต้องอยู่?"'},
+    {question:'คุณรู้จัก love language ของตัวเองไหม — และคุณเคยบอกคนที่รักตรงๆ ว่าต้องการอะไรบ้างไหม?',perspective:'Gary Chapman ค้นพบว่าคนแสดงและรับรู้ความรักผ่าน 5 ภาษาหลัก — words of affirmation, acts of service, receiving gifts, quality time, physical touch\n\nปัญหาที่พบบ่อยคือเรา "ให้" ในภาษาที่เราชอบ แต่ partner รับรู้ความรักผ่านภาษาที่ต่างออกไป สิ่งที่เราคิดว่าเป็นการแสดงความรักจึงไปไม่ถึงอีกฝ่าย\n\nแต่ที่น่าสนใจกว่าคือหลายคนไม่รู้ love language ของตัวเอง — พวกเขารู้แค่ว่า "ฉันรู้สึกว่าขาดอะไรบางอย่าง" โดยไม่รู้ว่าขาดอะไร',mental_model:'**Love Language Mismatch:** ก่อนที่จะ complain ว่าอีกฝ่าย "ไม่รัก" ถามว่า "เขา/เธอแสดงความรักในภาษาไหน?" และ "ฉันบอกชัดเจนไหมว่าต้องการอะไร?" Communication gap มักเป็นต้นเหตุของ perceived lack of love',real_example:'งานวิจัยพบว่าคู่ที่อยู่ด้วยกันได้นานมักมีลักษณะร่วมคือการ "turn towards" กัน — เมื่ออีกฝ่าย bid for connection ไม่ว่าเล็กแค่ไหน อีกฝ่ายตอบสนอง Gottman เรียกสิ่งนี้ว่า foundation ของ relationship',reflection:'"วิธีที่คนสำคัญในชีวิตคุณแสดงความรัก — คุณ notice และ appreciate มันอยู่ไหม?"'}
+  ],
+  purpose: [
+    {
+      question: 'ถ้าชีวิตของคุณไม่มีความหมายโดยธรรมชาติ แต่ต้องสร้างขึ้นเอง — คุณจะสร้างอะไร?',
+      perspective: 'นักปรัชญา existentialist อย่าง Sartre บอกว่า "existence precedes essence" — เราเกิดมาก่อน แล้วค่อยสร้างความหมายทีหลัง ไม่ใช่มีภารกิจมาตั้งแต่ต้น\n\nนั่นทั้งน่ากลัวและน่าตื่นเต้น เพราะมันแปลว่าความหมายชีวิตไม่ใช่สิ่งที่ "ค้นพบ" แต่เป็นสิ่งที่ "เลือก" และ "สร้าง" อย่างต่อเนื่อง\n\nViktor Frankl ที่รอดชีวิตจากค่ายกักกัน Nazi พบว่าผู้รอดชีวิตส่วนใหญ่ไม่ใช่คนแข็งแรงที่สุด แต่คือคนที่สามารถหาความหมายในความทุกข์ที่ตัวเองกำลังเผชิญได้',
+      mental_model: '**Logotherapy:** ความต้องการพื้นฐานที่สุดของมนุษย์ไม่ใช่ความสุข แต่คือความหมาย Frankl พบว่าคนที่รู้ว่า "ทำไม" จะทน "อย่างไร" ได้เกือบทุกอย่าง',
+      real_example: 'Patagonia ประกาศว่า "The Earth is now our only shareholder" และ Yvon Chouinard โอนบริษัทมูลค่า 3 พันล้านดอลลาร์ให้กับ trust เพื่อสิ่งแวดล้อม ไม่ใช่เพราะไม่รักเงิน แต่เพราะ purpose ชัดเจนกว่าการสะสม',
+      reflection: '"ถ้าคุณรู้ว่าจะตายในอีก 10 ปี — คุณจะใช้เวลาที่เหลือทำอะไร?"'
+    },
+    {
+      question: 'คุณกำลังใช้ชีวิตตาม "ค่านิยมของตัวเอง" หรือตาม "ค่านิยมที่สังคมบอกว่าควรมี"?',
+      perspective: 'คนส่วนใหญ่ไม่เคยนั่งเขียนหรือคิดอย่างจริงจังว่าตัวเองให้คุณค่ากับอะไรจริงๆ แต่กลับใช้ชีวิตตามสคริปต์ที่สังคม ครอบครัว หรือ peer group เขียนให้ — เรียนหนังสือ ทำงาน แต่งงาน มีบ้าน\n\nปัญหาคือสคริปต์เหล่านั้นไม่ได้ออกแบบมาสำหรับคุณโดยเฉพาะ มันออกแบบมาสำหรับ "คนส่วนใหญ่" และคุณอาจไม่ใช่คนส่วนใหญ่\n\nBrenné Brown นักวิจัยด้าน vulnerability บอกว่า "Living with integrity means having the courage to live by your values even when it\'s uncomfortable" — ค่านิยมที่แท้จริงจะถูกทดสอบตอนที่มันขัดแย้งกับสิ่งที่ "ควรทำ"',
+      mental_model: '**Values Clarification:** เขียน 5 ค่านิยมที่คิดว่าตัวเองมี แล้วดูว่าการกระทำ การใช้เวลา และการใช้เงินในสัปดาห์ที่ผ่านมา สอดคล้องกับค่านิยมนั้นจริงๆ ไหม ช่องว่างระหว่างที่พูดกับที่ทำคือ insight ที่มีค่ามาก',
+      real_example: 'Reed Hastings ปฏิเสธข้อเสนอขาย Netflix ให้ Amazon มูลค่าหลายพันล้าน เพราะ value core ของเขาคือการ "change how people experience entertainment" — ถ้าขาย mission นั้นจบ เงินมากแค่ไหนก็ไม่ compensate ได้',
+      reflection: '"ค่านิยมข้อใดที่คุณพูดว่ามี แต่การกระทำในชีวิตจริงยังไม่สะท้อนออกมา?"'
+    },
+    {
+      question: 'ถ้าคุณรู้ว่าจะไม่ล้มเหลว — คุณจะทำอะไรที่ยังไม่กล้าทำ?',
+      perspective: 'คำถามนี้ดูเหมือน motivational แต่จริงๆ มันเป็น diagnostic tool ที่ทรงพลัง เพราะสิ่งที่คุณตอบมักไม่ใช่ "ฉันจะทำอะไรถ้าสำเร็จ" แต่คือ "ฉันกลัวล้มเหลวในเรื่องอะไรมากที่สุด"\n\nความกลัวล้มเหลวมักซ่อนอยู่ใต้เหตุผลที่ฟังดู rational เช่น "เวลาไม่พอ" "ทุนไม่มี" "ยังไม่พร้อม" เหล่านี้อาจเป็นความจริง แต่บ่อยครั้งเป็นแค่ narrative ที่สมองสร้างขึ้นเพื่อหลีกเลี่ยงความเสี่ยง\n\nRegret ที่ทรมานคนในวัยชราที่สุดไม่ใช่สิ่งที่ทำแล้วล้มเหลว แต่คือสิ่งที่ไม่เคยลอง',
+      mental_model: '**Regret Minimization Framework:** Jeff Bezos ถามตัวเองว่า "ตอนอายุ 80 ฉันจะเสียใจกับการตัดสินใจครั้งนี้ไหม?" ถ้าคำตอบคือไม่ — ทำเลย ถ้าคือใช่ — หยุดคิดใหม่',
+      real_example: 'Bronnie Ware พยาบาลที่ดูแลผู้ป่วยระยะสุดท้าย บันทึกว่า regret อันดับ 1 ที่ได้ยินซ้ำๆ คือ "ฉันอยากใช้ชีวิตตามแบบที่ตัวเองต้องการ ไม่ใช่ตามที่คนอื่นคาดหวัง"',
+      reflection: '"สิ่งที่คุณ \'เกือบทำ\' แต่ยังไม่ได้ทำ — มันยังรอคุณอยู่ไหม?"'
+    },
+    {
+      question: 'Legacy ที่คุณอยากทิ้งไว้ — มันเกี่ยวกับ "สิ่งที่คุณสร้าง" หรือ "คนที่คุณเป็น"?',
+      perspective: 'วัฒนธรรมสมัยใหม่สอนให้เราคิดถึง legacy ในแง่ของ achievements — บริษัทที่สร้าง หนังสือที่เขียน เงินที่บริจาค แต่งานวิจัยเกี่ยวกับ end-of-life meaning พบว่าคนส่วนใหญ่ไม่ได้นึกถึงสิ่งเหล่านั้น\n\nพวกเขานึกถึงความสัมพันธ์ การที่ตัวเองอยู่เคียงข้างใครในช่วงเวลายาก ผลกระทบที่มีต่อชีวิตคนอื่นโดยที่ไม่รู้ตัว\n\nAristotle แบ่ง "good life" เป็น eudaimonia — ไม่ใช่ความสุขชั่วคราว แต่คือการได้ flourish ในฐานะที่เป็นมนุษย์อย่างเต็มที่ มันรวมทั้งการสร้างและการเป็น',
+      mental_model: '**Being vs Doing Legacy:** สร้าง 2 list — "สิ่งที่ฉันอยากสร้างในชีวิต" และ "คนแบบไหนที่ฉันอยากเป็น" แล้วถามว่าวิธีที่คุณใช้ชีวิตตอนนี้ balance ทั้งสองได้ไหม',
+      reflection: '"คนที่รักคุณมากที่สุดจะพูดถึงคุณว่าอะไร ในวันที่คุณไม่อยู่แล้ว?"'},
+    {question:'เส้นทางที่คุณกำลังเดินอยู่ — เป็นของคุณเอง หรือเป็นเส้นทางที่คนอื่นคาดหวังให้คุณเดิน?',perspective:'Existential philosophy บอกว่า "bad faith" คือการใช้ชีวิตตาม script ของคนอื่นโดยไม่ตระหนักว่าตัวเองมีทางเลือก Sartre เรียกมันว่าการปฏิเสธ radical freedom ที่มนุษย์ทุกคนมี\n\nที่น่าสนใจคือ social pressure ไม่ได้มาแค่จากครอบครัวหรือสังคม แต่มาจากตัวเราเองที่ internalize expectation จนกลายเป็น "inner critic"\n\nการค้นหาทางของตัวเองไม่ใช่การทำตามที่อยากทำทุกอย่าง แต่คือการตัดสินใจอย่างมีสติว่าจะ commit กับอะไร ไม่ใช่แค่ drift ตาม default',mental_model:'**Authentic vs. Socially Constructed Path:** ลองแยกสิ่งที่ "คุณต้องการ" ออกจากสิ่งที่ "คุณควรต้องการตาม script" โดยถามว่า "ถ้าไม่มีใครรู้ว่าคุณเลือกอะไร — คุณจะเลือกอะไร?"',real_example:'Chimamanda Ngozi Adichie บอกในสุนทรพจน์ที่มีชื่อเสียงว่า "The single story creates stereotypes, and the problem with stereotypes is not that they are untrue, but that they are incomplete" — เราแต่ละคนคือ multi-chapter story ไม่ใช่ single narrative',reflection:'"บท (chapter) ถัดไปของชีวิตคุณ — ถ้าคุณเป็นคนเขียนเอง คุณจะเขียนว่าอะไร?"'},
+    {question:'ความสุขที่คุณรอในอนาคต — คุณกำลังรอสิ่งที่อยู่นอกตัวเอง หรือสร้างมันจากภายใน?',perspective:'Sonja Lyubomirsky นักจิตวิทยาด้านความสุข พบว่า 50% ของ happiness setpoint มาจาก genetics 10% มาจาก circumstances (เงิน งาน ที่อยู่) และ 40% มาจาก intentional activity — สิ่งที่เราเลือกทำ\n\nนั่นแปลว่าการ chase circumstances (เงิน ตำแหน่ง คู่รัก) เพื่อหาความสุขเป็น inefficient strategy ที่ให้ผลได้แค่ 10% ของ potential\n\nแต่ลึกกว่านั้น happiness ที่มาจาก meaning แตกต่างจาก pleasure ที่มาจาก stimulation — สิ่งแรกสร้างได้จากภายใน สิ่งหลังต้องพึ่งปัจจัยภายนอกตลอดเวลา',mental_model:'**Hedonic vs Eudaimonic Happiness:** Hedonic happiness คือ pleasure จากประสบการณ์ดีๆ Eudaimonic happiness คือ fulfillment จากการใช้ชีวิตที่ aligned กับ values ทั้งสองต้องการ แต่ second ทน time ได้มากกว่า',real_example:'Viktor Frankl เขียนใน Man\'s Search for Meaning ว่าในค่ายกักกัน Nazi แม้จะถูกลิดรอนทุกอย่าง แต่ยังมีอิสรภาพหนึ่งอย่างที่ไม่มีใครเอาไปได้ — "the last of the human freedoms, to choose one\'s attitude in any given set of circumstances"',reflection:'"ความสุขที่คุณรู้สึก "ได้รับ" ล่าสุด มาจากอะไร — และมันขึ้นอยู่กับปัจจัยภายนอกแค่ไหน?"'},
+    {question:'ถ้าชีวิตของคุณถูกนำไปสร้างเป็นหนังสือ — บทที่คุณกำลังเขียนอยู่ตอนนี้จะมีชื่อว่าอะไร?',perspective:'Narrative therapy ใช้ metaphor ของ story เพื่อช่วยให้คนเข้าใจชีวิตตัวเอง เพราะสมองมนุษย์ประมวลผลชีวิตในรูปของ stories ไม่ใช่ facts\n\nสิ่งที่น่าคิดคือ "ตอนนี้คุณอยู่ในบทไหน?" — บทที่ยาก บทที่กำลังเปลี่ยนแปลง บทที่กำลัง build foundation หรือบทที่กำลัง plateau?\n\nการรู้ว่าตัวเองอยู่ในบทไหนเปลี่ยนวิธีที่เรามองปัญหาปัจจุบัน — บทที่ยากไม่ใช่จุดจบ แต่อาจเป็น turning point ที่สำคัญที่สุดของเรื่อง',mental_model:'**Story Arc Awareness:** ใน narrative structure ทุก hero journey มี ordinary world, call to adventure, trials, และ transformation ตอนที่ชีวิตยากที่สุดมักตรงกับช่วง "ordeal" ซึ่งเป็นจุดที่ character growth เกิดขึ้นมากที่สุด',real_example:'J.K. Rowling เขียน Harry Potter ในช่วงชีวิตที่ตัวเองหย่าร้าง ว่างงาน และใกล้ไม่มีเงิน เธอบอกว่า "Rock bottom became the solid foundation on which I rebuilt my life" — บทที่ยากที่สุดนั้นกลายเป็น source ของงานที่ยิ่งใหญ่ที่สุด',reflection:'"ถ้าชีวิตคุณคือหนังสือ — บทนี้กำลังพาคุณไปสู่อะไร?"'},
+    {question:'อะไรคือสิ่งที่คุณจะ "ไม่เสียใจ" ในวันสุดท้ายของชีวิต — และวันนี้คุณกำลังทำสิ่งนั้นอยู่ไหม?',perspective:'Palliative care physician BJ Miller บอกจากประสบการณ์ดูแลผู้ป่วยระยะสุดท้ายว่า ไม่มีใครเลยที่บอกว่าอยากใช้เวลามากขึ้นในออฟฟิศ\n\nสิ่งที่คนพูดถึงในวาระสุดท้ายมักเป็นประสบการณ์ร่วมกับคนที่รัก ความกล้าที่ตัดสินใจตามที่ใจต้องการ และ contribution ที่ทิ้งไว้ให้คนอื่น\n\nOliver Burkeman เขียนใน Four Thousand Weeks ว่ามนุษย์โดยเฉลี่ยมีชีวิตอยู่ 4,000 สัปดาห์ การตระหนักถึง finitude ไม่ได้ทำให้ชีวิตน่ากลัว แต่ทำให้ทุกชั่วโมงมีน้ำหนักมากขึ้น',mental_model:'**Memento Mori as Compass:** การตระหนักถึงความตายไม่ใช่ pessimism แต่คือ clarifying force ที่ช่วยตัดสิ่งที่ไม่จำเป็นออกและทำให้เห็นชัดว่าอะไรสำคัญจริงๆ',real_example:'Steve Jobs กล่าวใน Stanford commencement ปี 2005 ว่า "Remembering that I\'ll be dead soon is the most important tool I\'ve ever encountered to help me make the big choices in life. Because almost everything — all external expectations, all pride, all fear of embarrassment or failure — these things just fall away in the face of death"',reflection:'"ถ้ามีเวลาเหลืออยู่ 1 ปี — คุณจะทำอะไรต่างออกไปจากตอนนี้?"'}
+  ],
+  health: [
+    {
+      question: 'คุณดูแลร่างกายเพราะรักตัวเอง หรือเพราะกลัวว่าจะเสียอะไรบางอย่าง?',
+      perspective: 'มีความแตกต่างอย่างมีนัยสำคัญระหว่างการดูแลสุขภาพที่ขับเคลื่อนด้วย "ความกลัว" กับที่ขับเคลื่อนด้วย "คุณค่า" คนส่วนใหญ่เริ่มออกกำลังกายหลังหมอเตือน เริ่มนอนหลังล้มป่วย — นั่นคือ reactive health ไม่ใช่ proactive wellness\n\nนักวิทยาศาสตร์ด้าน longevity อย่าง Peter Attia เรียกสิ่งที่คนส่วนใหญ่ทำว่า "Medicine 2.0" — รักษาโรคเมื่อเกิดขึ้นแล้ว แต่ "Medicine 3.0" คือการออกแบบชีวิตเพื่อให้ทศวรรษสุดท้ายของชีวิตยังมีคุณภาพ ไม่ใช่แค่ยังมีชีวิตอยู่\n\nคำถามที่ลึกกว่าคือ คุณอยากแข็งแรงเพื่ออะไร? เพราะถ้าไม่มีคำตอบนั้น discipline ด้านสุขภาพจะสลายทันทีที่ชีวิตยุ่ง',
+      mental_model: '**Healthspan vs Lifespan:** อายุยืนไม่ใช่เป้าหมาย — คุณภาพชีวิตในทุกปีคือเป้าหมาย ถามตัวเองว่า "ตอนอายุ 80 ฉันอยากทำอะไรได้บ้าง?" แล้วย้อนกลับมาออกแบบนิสัยวันนี้จากคำตอบนั้น',
+      real_example: 'Bryan Johnson ใช้เงิน 2 ล้านดอลลาร์ต่อปีเพื่อ optimize ร่างกาย — แต่สิ่งที่น่าสนใจกว่าเงินคือ คำถามที่เขาตั้งว่า "ถ้าร่างกายคือบริษัท คุณกำลัง manage มันด้วย data หรือ feeling?" คนส่วนใหญ่ run ร่างกายแบบที่ไม่มีใคร run บริษัทได้',
+      reflection: '"ถ้าร่างกายคุณเป็นพนักงานคนหนึ่งในชีวิต — คุณเป็น boss แบบไหนให้กับมัน?"'
+    },
+    {
+      question: 'ความเครียดที่คุณสะสมไว้ในร่างกาย — คุณรู้ไหมว่ามันอยู่ที่ไหน และมาจากอะไร?',
+      perspective: 'งานวิจัยของ Bessel van der Kolk ใน "The Body Keeps the Score" แสดงให้เห็นว่าความเครียดและ trauma ไม่ได้อยู่แค่ในความทรงจำ แต่ฝังอยู่ในร่างกายจริงๆ — ในรูปแบบของกล้ามเนื้อตึง การหายใจตื้น ระบบย่อยอาหารที่ผิดปกติ\n\nคนที่ทำงานหนักมักภูมิใจว่า "จัดการ stress ได้ดี" เพราะไม่รู้สึกถึง stress ทางจิตใจ แต่ร่างกายกำลัง absorb มันอยู่ตลอดเวลา\n\nการ ignore สัญญาณจากร่างกายไม่ใช่ความแข็งแกร่ง มันคือการหักโหมทรัพยากรที่มีจำกัดโดยไม่รู้ตัว',
+      mental_model: '**Allostatic Load:** ภาระสะสมจากความเครียดที่ร่างกายต้องแบก เมื่อ load เกิน capacity ร่างกายเริ่ม break down ทีละนิด ก่อนจะถึงจุดที่เราสังเกตเห็น การลด load ต้องทำตั้งแต่ก่อนถึงจุดนั้น',
+      real_example: 'Arianna Huffington หมดสติล้มหน้าโต๊ะทำงานจน cheekbone แตก นั่นคือจุดที่เธอเริ่มเขียน "Thrive" และ redefine ความสำเร็จใหม่ให้รวมสุขภาพและการพักผ่อนเป็นส่วนหนึ่งของ performance ไม่ใช่อุปสรรคต่อมัน',
+      reflection: '"ร่างกายของคุณกำลังบอกอะไรคุณอยู่ที่คุณยังไม่ยอมฟัง?"'
+    },
+    {
+      question: 'คุณนอนหลับเต็มที่ครั้งสุดท้ายเมื่อไหร่ — และคุณได้ให้คุณค่ากับการนอนเหมือนกับการประชุมสำคัญไหม?',
+      perspective: 'Matthew Walker นักวิทยาศาสตร์ด้านการนอนหลับบอกว่า "Sleep is the single most effective thing you can do to reset your brain and body health" แต่ในวัฒนธรรม hustle การนอนน้อยถูกมองว่าเป็นสัญลักษณ์ของความขยัน\n\nความจริงที่โหดร้ายคือ การนอนน้อยกว่า 6 ชั่วโมงเป็นประจำ ส่งผลเทียบเท่ากับการดื่มเหล้า — cognitive performance ลดลง แต่คนที่ sleep deprived มักไม่รู้ตัวว่าตัวเองบกพร่อง\n\nCEO และผู้บริหารที่ประสบความสำเร็จระยะยาว ส่วนใหญ่นอน 7–9 ชั่วโมง ไม่ใช่ 4–5 ชั่วโมงอย่างที่ myth บอก',
+      mental_model: '**Sleep ROI:** การนอนหลับคือ highest ROI activity ที่มี — 1 ชั่วโมงที่ลงทุนในการนอนคืน performance, decision quality, และ emotional regulation ในชั่วโมงที่ตื่นอยู่ทั้งหมด',
+      real_example: 'Jeff Bezos พูดอย่างเปิดเผยว่าเขานอน 8 ชั่วโมงและปฏิเสธการประชุมก่อน 10 โมงเช้า เขาบอกว่า "8 hours of sleep makes a big difference for me, and I try hard to make that a priority" เพราะ 10 good decisions ดีกว่า 100 bad ones',
+      reflection: '"ถ้าคุณได้นอนหลับอย่างเต็มที่ทุกคืนเป็นเวลา 30 วัน — ชีวิตจะเปลี่ยนไปอย่างไร?"'
+    },
+    {
+      question: 'ร่างกายที่คุณมีตอนนี้ เป็นผลสะสมของการตัดสินใจในอดีต — คุณพอใจกับทิศทางที่มันกำลังจะไปไหม?',
+      perspective: '"Compounding" ไม่ใช่แค่หลักการทางการเงิน มันคือกลไกที่ทำงานในสุขภาพด้วย การออกกำลังกายสม่ำเสมอหรือนอนหลับดีทุกคืน ดูเหมือนให้ผลน้อยในแต่ละวัน แต่ compound ไปเป็นสิบปีให้ผลลัพธ์ที่ต่างกันมหาศาล\n\nปัญหาคือ health compounding เป็น delayed feedback loop — เราไม่เห็น consequence ทันที จึงง่ายที่จะตัดสินใจแย่ซ้ำๆ โดยไม่รู้สึกถึงผล\n\nคนที่เข้าใจ health compounding จะ treat ร่างกายเหมือน long-term investment ไม่ใช่ resource ที่ใช้แล้วทิ้ง',
+      mental_model: '**Health Compounding:** ทุก habit ที่คุณทำซ้ำทุกวัน กำลัง compound ไปในทิศทางใดทิศทางหนึ่งเสมอ ไม่มีทางยืน neutral ถามว่า 10 ปีข้างหน้า habit ปัจจุบันจะ compound ไปหาอะไร',
+      reflection: '"นิสัยด้านสุขภาพที่คุณทำอยู่ตอนนี้ — ถ้า compound ไป 10 ปี ผลลัพธ์จะเป็นอะไร?"'},
+    {question:'ถ้าคุณ design ชีวิตเพื่อให้อายุ 80 ยังคมชัดและมีพลัง — คุณจะทำอะไรต่างจากตอนนี้?',perspective:'Peter Attia นักแพทย์ผู้เชี่ยวชาญด้าน longevity แนะนำให้คิดว่าคุณอยากทำอะไรได้ใน "marginal decade" — ช่วงสุดท้ายของชีวิต แล้ว reverse engineer กลับมาว่าต้องทำอะไรตั้งแต่ตอนนี้\n\nถ้าอยากยกหลานได้ตอนอายุ 80 — ต้องมี muscle mass และ bone density เพียงพอ ซึ่งต้อง build จากตอนอายุ 40-50\n\nถ้าอยาง sharp ทางจิตใจ — ต้องดูแล sleep, social connection, และ cognitive challenge ตั้งแต่วันนี้ เพราะ brain health เป็น compounding game ที่ตัดสินใจทีหลังอาจสายเกินไป',mental_model:'**Marginal Decade Thinking:** ตัดสินใจเรื่องสุขภาพวันนี้โดยถามว่า "สิ่งที่ฉันทำหรือไม่ทำตอนนี้ จะ enable หรือ disable ความสามารถในการทำอะไรในทศวรรษสุดท้ายของชีวิต?"',real_example:'Jack LaLanne ผู้บุกเบิก fitness วัฒนธรรม ออกกำลังกายทุกวันไม่เว้นจนถึงวันก่อนเสียชีวิตตอนอายุ 96 ปี เขาบอกว่า "Exercise is king, nutrition is queen, put them together and you\'ve got a kingdom"',reflection:'"อายุ 80 คุณอยากยังสามารถทำอะไรได้บ้าง — และชีวิตตอนนี้กำลัง enable หรือ disable goal นั้น?"'},
+    {question:'คุณกินอาหารเพื่อ "เติมพลัง" หรือเพื่อ "จัดการความรู้สึก"?',perspective:'นักจิตวิทยาพบว่ากว่า 75% ของการกินมากเกินไปเป็น emotional eating — เราใช้อาหารเพื่อ numb, celebrate, comfort, หรือ reward ตัวเอง\n\nปัญหาไม่ใช่ว่า emotional eating เป็นเรื่องเลว แต่คือเมื่อมันกลายเป็น primary coping mechanism สำหรับทุกอารมณ์ เราจะหยุดพัฒนา emotional regulation skills อื่นๆ\n\nGabor Maté นักจิตวิทยาบอกว่า addiction ทุกรูปแบบรวมถึง food addiction เป็น "attempt to solve a problem" — ปัญหาที่ซ่อนอยู่มักคือความเจ็บปวด ความเหงา หรือ unmet emotional needs',mental_model:'**Hunger Awareness:** ก่อนกินถามตัวเองว่า "ฉันหิวจริงๆ หรือรู้สึกอะไรอยู่?" ถ้าหิวจริง — กิน ถ้ารู้สึกอย่างอื่น — acknowledge ความรู้สึกนั้นก่อน แล้วค่อยตัดสินใจว่าจะจัดการยังไง',real_example:'นักกีฬา Olympic หลายคนบอกว่าการเปลี่ยน relationship กับอาหารจาก "fuel for performance" ทำให้ทั้ง performance และ body image ดีขึ้น เพราะ they stopped seeing food as reward or punishment',reflection:'"ครั้งสุดท้ายที่คุณกินอาหารแล้วรู้สึก guilty หลังกิน — คุณกำลังจัดการความรู้สึกอะไรอยู่ตอนนั้น?"'},
+    {question:'ระดับพลังงานของคุณตอนบ่าย 3 โมง — มันบอกอะไรเกี่ยวกับ lifestyle ของคุณ?',perspective:'Circadian biology พบว่า energy dip ช่วงบ่าย 2-4 โมงเป็นเรื่องปกติทาง biology แต่ความรุนแรงของมันต่างกันมากขึ้นอยู่กับ lifestyle\n\nคนที่นอนหลับดี กินอาหารที่ stable blood sugar และมี movement ในช่วงเช้า มักมี dip น้อยกว่ามาก\n\nแต่ที่น่าสนใจกว่าคือ "post-lunch dip" บางครั้งไม่ใช่เรื่องชีววิทยา แต่เป็นสัญญาณของ chronic stress — ร่างกายที่ exhausted จากการ sustain alert state ตลอดเวลา',mental_model:'**Ultradian Rhythm:** สมองทำงานเป็น 90-120 นาที cycle ตามธรรมชาติ ตามด้วยช่วง rest 20 นาที การ fight นาฬิกาชีววิทยานี้ด้วย caffeine หรือ willpower ทำให้ performance ลดลงในระยะยาว',real_example:'นักวิจัย Anders Ericsson ที่ศึกษา expert performance พบว่า top performers แทบทุกสาขา work ไม่เกิน 4-5 ชั่วโมงต่อวันในระดับ intense focus และ rest อย่างจริงจัง ไม่ใช่พยายาม push through fatigue',reflection:'"ถ้าคุณ redesign ตารางวันของคุณตาม energy ไม่ใช่ตาม schedule — มันจะหน้าตาเป็นยังไง?"'},
+    {question:'ความสัมพันธ์กับ exercise ของคุณ — มันเป็นการ punishment, reward, หรือเป็นส่วนหนึ่งของการดูแลตัวเองอย่างแท้จริง?',perspective:'วัฒนธรรม fitness มักสอนให้เราออกกำลังกายเป็น punishment สำหรับการกินมาก หรือเป็น transaction เพื่อแลกกับ "right to eat" สิ่งเหล่านี้สร้าง toxic relationship กับทั้ง exercise และอาหาร\n\nงานวิจัยด้าน behavioral psychology พบว่า intrinsic motivation ให้ผลลัพธ์ระยะยาวดีกว่า extrinsic motivation มาก คนที่ออกกำลังกายเพราะ "ชอบ" หรือเพราะ "ทำให้รู้สึกดี" มักทำต่อเนื่องได้นานกว่าคนที่ทำเพราะ "ต้องทำ"\n\nการ find movement ที่คุณ genuinely enjoy คือ key — ไม่ใช่ optimal exercise ที่ใครบอกว่าดีที่สุด',mental_model:'**Movement as Self-Care:** แทนที่จะถามว่า "ออกกำลังกายอะไรดีที่สุด?" ลองถามว่า "movement อะไรที่ทำแล้วรู้สึกดี?" เพราะ best exercise คือ exercise ที่คุณจะทำจริงๆ และทำต่อเนื่อง',real_example:'Matthew McConaughey เล่าว่าการเปลี่ยน mindset จาก "ต้องออกกำลังกายเพื่อ look good" เป็น "ออกกำลังกายเพราะมันทำให้ฉัน clear ทางจิตใจ" เปลี่ยนความสัมพันธ์กับ fitness ของเขาอย่างสิ้นเชิง',reflection:'"Movement ที่คุณรู้สึกว่าทำแล้ว "ดีจริงๆ" ไม่ใช่แค่ดีเพราะ "ควรทำ" — คืออะไร?"'},
+    {question:'คุณดื่มน้ำพอไหม — และถ้าแค่เรื่องง่ายแบบนี้คุณยังทำไม่สม่ำเสมอ มันบอกอะไรเกี่ยวกับ priority ของสุขภาพในชีวิตคุณ?',perspective:'ดูเหมือนคำถามตลก แต่จริงๆ แล้วมันเป็น metaphor ที่ทรงพลัง เราทุกคนรู้ว่าควรดื่มน้ำ นอนหลับ ออกกำลังกาย กินผักผลไม้ — สิ่งเหล่านี้ไม่มีความลับอะไร\n\nแต่ gap ระหว่าง "รู้" กับ "ทำ" บอกอะไรบางอย่างที่ลึกกว่า — อาจเป็น priority ที่ไม่ match อาจเป็น self-care ที่รู้สึกว่า "ไม่ deserving" หรืออาจเป็น pace ชีวิตที่ไม่มีพื้นที่แม้แต่สำหรับ basics\n\nJames Clear บอกว่า small habits reveal bigger truths about identity — คนที่ "เป็นคนดูแลสุขภาพ" ดื่มน้ำโดยอัตโนมัติ ไม่ใช่ force',mental_model:'**Identity-Based Habits:** แทนที่จะตั้งเป้า "ฉันจะดื่มน้ำ 8 แก้ว" ลองถามว่า "คนที่ดูแลสุขภาพตัวเองดีจะทำอะไรในสถานการณ์นี้?" แล้วทำตาม identity นั้น',real_example:'James Clear เขียนใน Atomic Habits ว่า identity change เป็น root ของ lasting behavior change "Every action you take is a vote for the type of person you wish to become" — การดื่มน้ำทุกวันคือ vote ว่าคุณเป็นคนดูแลสุขภาพ',reflection:'"สิ่งที่ง่ายที่สุดที่คุณรู้ว่าดีต่อสุขภาพแต่ยังทำไม่สม่ำเสมอ — อะไรทำให้มัน \'ยาก\' สำหรับคุณจริงๆ?"'}
+  ]
+};
+
+
+let selectedCat = null;
+
+function buildCategories() {
+  const grid = document.getElementById('categories');
+  CATEGORIES.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.id = 'cat-' + cat.id;
+    btn.onclick = () => selectCategory(cat.id);
+    btn.className = 'relative text-left px-4 py-4 rounded-xl border transition-all duration-200 cursor-pointer card-hover';
+    btn.style.background = '#1c1c22';
+    btn.style.borderColor = '#242430';
+    btn.innerHTML = `
+      <span class="active-dot hidden absolute top-3 right-3 w-2 h-2 rounded-full bg-yellow-500 pulse-dot"></span>
+      <span class="block text-xl mb-2 opacity-80">${cat.icon}</span>
+      <span class="cat-name block text-sm font-semibold tracking-wide mb-1 text-slate-200">${cat.label}</span>
+      <span class="block text-xs text-slate-500 leading-relaxed">${cat.sub}</span>
+    `;
+    grid.appendChild(btn);
+  });
+}
+
+function selectCategory(id) {
+  selectedCat = id;
+  CATEGORIES.forEach(cat => {
+    const btn = document.getElementById('cat-' + cat.id);
+    const dot = btn.querySelector('.active-dot');
+    const name = btn.querySelector('.cat-name');
+    if (cat.id === id) {
+      btn.classList.add('cat-active');
+      btn.style.borderColor = '#c9a84c';
+      btn.style.background = 'rgba(201,168,76,0.08)';
+      dot.classList.remove('hidden');
+      name.style.color = '#c9a84c';
+    } else {
+      btn.style.borderColor = '#242430';
+      btn.style.background = '#1c1c22';
+      dot.classList.add('hidden');
+      name.style.color = '#e2e8f0';
+    }
+  });
+
+  const btn = document.getElementById('genBtn');
+  btn.disabled = false;
+  btn.className = 'px-10 py-4 rounded-xl font-semibold text-sm tracking-widest uppercase transition-all duration-300 glow cursor-pointer text-charcoal-900';
+  btn.style.background = '#c9a84c';
+  btn.style.color = '#0d0d0f';
+}
+
+function handleGenerate() {
+  if (!selectedCat) return;
+  const resultDiv = document.getElementById('result');
+  const loading = document.getElementById('loading');
+  const card = document.getElementById('resultCard');
+
+  resultDiv.classList.remove('hidden');
+  loading.classList.remove('hidden');
+  card.classList.add('hidden');
+  resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Simulate loading delay
+  setTimeout(() => showResult(), 1800);
+}
+
+function showResult() {
+  const loading = document.getElementById('loading');
+  const card = document.getElementById('resultCard');
+
+  // Pick sample — random maps to a random sample
+  let catId = selectedCat;
+  let randomLabel = null;
+  if (catId === 'random') {
+    const real = ['productivity','mindfulness','wealth','psychology','relationships','purpose','health'];
+    catId = real[Math.floor(Math.random() * real.length)];
+    randomLabel = CATEGORIES.find(c => c.id === catId)?.label;
+  }
+
+  const sample = pickSample(catId) || pickSample('productivity');
+  const catObj = CATEGORIES.find(c => c.id === catId);
+
+  // Fill result
+  document.getElementById('catLabel').textContent = catObj?.label || '';
+  const randEl = document.getElementById('randomLabel');
+  if (randomLabel) {
+    randEl.textContent = '∞ หมวดที่สุ่มได้คือ: ' + randomLabel;
+    randEl.classList.remove('hidden');
+  } else {
+    randEl.classList.add('hidden');
+  }
+
+  document.getElementById('rQuestion').textContent = sample.question;
+
+  const perspEl = document.getElementById('rPerspective');
+  perspEl.innerHTML = '';
+  sample.perspective.split('\n').filter(Boolean).forEach(p => {
+    const el = document.createElement('p');
+    el.textContent = p;
+    perspEl.appendChild(el);
+  });
+
+  document.getElementById('rModel').innerHTML = sample.mental_model.replace(/\*\*(.*?)\*\*/g, '<strong class="text-slate-100">$1</strong>');
+  document.getElementById('rExample').textContent = sample.real_example;
+  document.getElementById('rReflection').textContent = sample.reflection;
+
+  loading.classList.add('hidden');
+  card.classList.remove('hidden');
+}
+
+function copyResult() {
+  const q = document.getElementById('rQuestion').textContent;
+  const p = document.getElementById('rPerspective').textContent;
+  const m = document.getElementById('rModel').textContent;
+  const e = document.getElementById('rExample').textContent;
+  const r = document.getElementById('rReflection').textContent;
+  const cat = document.getElementById('catLabel').textContent;
+
+  const text = `═══ Deep Question Companion ═══\n\nหมวด: ${cat}\n\n❓ คำถามวันนี้\n${q}\n\n💡 บทสนทนา / มุมมอง\n${p}\n\n🧠 Mental Model\n${m}\n\n🌍 ตัวอย่างจากโลกจริง\n${e}\n\n🔍 คำถามไว้คิดต่อวันนี้\n${r}`;
+
+  navigator.clipboard.writeText(text).catch(() => {});
+  const btn = document.getElementById('copyBtn');
+  btn.innerHTML = `<svg class="w-3.5 h-3.5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Copied`;
+  btn.style.color = '#c9a84c';
+  setTimeout(() => {
+    btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg> Copy`;
+    btn.style.color = '';
+  }, 2000);
+}
+
+buildCategories();
+</script>
+</body>
+</html>

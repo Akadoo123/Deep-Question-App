@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Static Preview",
+      "runtimeExecutable": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "runtimeArgs": ["-NoProfile", "-Command", "$l=[System.Net.HttpListener]::new();$l.Prefixes.Add('http://localhost:5500/');$l.Start();while($true){$c=$l.GetContext();$f='C:\\Users\\ASUS\\Desktop\\Deep Question Claude\\'+($c.Request.Url.LocalPath.TrimStart('/'));if($f -eq 'C:\\Users\\ASUS\\Desktop\\Deep Question Claude\\'){$f='C:\\Users\\ASUS\\Desktop\\Deep Question Claude\\preview.html'};$b=[System.IO.File]::ReadAllBytes($f);$c.Response.ContentType='text/html';$c.Response.OutputStream.Write($b,0,$b.Length);$c.Response.Close()}"],
+      "port": 5500
+    },
+    {
+      "name": "Next.js Dev Server",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "Next.js Production Preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start"],
+      "port": 3000
+    }
+  ]
+}
