@@ -166,7 +166,7 @@ ${result.reflection}
             คำถามไว้คิดต่อวันนี้
           </p>
           <p className="text-gold-light text-sm font-medium italic leading-relaxed">
-            "{result.reflection}"
+            &ldquo;{result.reflection}&rdquo;
           </p>
         </div>
       </div>
