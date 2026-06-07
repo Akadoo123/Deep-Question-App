@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
   const validIds: CategoryId[] = [
     "productivity", "mindfulness", "wealth",
-    "psychology", "relationships", "purpose", "random",
+    "psychology", "relationships", "purpose", "health", "random",
   ];
   if (!validIds.includes(categoryId as CategoryId)) {
     return NextResponse.json({ error: "Invalid category" }, { status: 400 });
@@ -70,10 +70,36 @@ export async function POST(req: NextRequest) {
     };
 
     try {
-      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      let cleaned = rawText.trim();
+      // Strip markdown code fences like ```json ... ``` or ``` ... ```
+      cleaned = cleaned.replace(/^```[a-zA-Z]*\s*/g, "").replace(/```\s*$/g, "").trim();
+
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error("No JSON found");
-      parsed = JSON.parse(jsonMatch[0]);
-    } catch {
+
+      let jsonStr = jsonMatch[0];
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch {
+        // Attempt to fix common issues: trailing commas, control characters
+        const fixed = jsonStr
+          .replace(/,\s*([}\]])/g, "$1")
+          .replace(/[ -]+/g, " ");
+        parsed = JSON.parse(fixed);
+      }
+
+      if (
+        !parsed ||
+        typeof parsed.question !== "string" ||
+        typeof parsed.perspective !== "string" ||
+        typeof parsed.mental_model !== "string" ||
+        typeof parsed.real_example !== "string" ||
+        typeof parsed.reflection !== "string"
+      ) {
+        throw new Error("Missing fields");
+      }
+    } catch (parseErr) {
+      console.error("Failed to parse AI response:", parseErr, "raw:", rawText);
       return NextResponse.json(
         { error: "AI returned unexpected format. Please try again." },
         { status: 502 }
