@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error("No JSON found");
 
-      let jsonStr = jsonMatch[0];
+      const jsonStr = jsonMatch[0];
       try {
         parsed = JSON.parse(jsonStr);
       } catch {
