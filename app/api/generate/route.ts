@@ -5,6 +5,21 @@ import { buildSystemPrompt, buildUserPrompt } from "@/lib/prompts";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+function escapeStringNewlines(json: string): string {
+  let inString = false;
+  let escaped = false;
+  let result = "";
+  for (let i = 0; i < json.length; i++) {
+    const ch = json[i];
+    if (escaped) { result += ch; escaped = false; continue; }
+    if (ch === "\\" && inString) { result += ch; escaped = true; continue; }
+    if (ch === '"') { inString = !inString; result += ch; continue; }
+    if (inString && (ch === "\n" || ch === "\r")) { result += "\\n"; continue; }
+    result += ch;
+  }
+  return result;
+}
+
 export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -81,10 +96,8 @@ export async function POST(req: NextRequest) {
       try {
         parsed = JSON.parse(jsonStr);
       } catch {
-        // Attempt to fix common issues: trailing commas, control characters
-        const fixed = jsonStr
-          .replace(/,\s*([}\]])/g, "$1")
-          .replace(/[ -]+/g, " ");
+        // Escape literal newlines inside JSON string values, then fix trailing commas
+        const fixed = escapeStringNewlines(jsonStr).replace(/,\s*([}\]])/g, "$1");
         parsed = JSON.parse(fixed);
       }
 
