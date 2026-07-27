@@ -5,21 +5,6 @@ import { buildSystemPrompt, buildUserPrompt } from "@/lib/prompts";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-function escapeStringNewlines(json: string): string {
-  let inString = false;
-  let escaped = false;
-  let result = "";
-  for (let i = 0; i < json.length; i++) {
-    const ch = json[i];
-    if (escaped) { result += ch; escaped = false; continue; }
-    if (ch === "\\" && inString) { result += ch; escaped = true; continue; }
-    if (ch === '"') { inString = !inString; result += ch; continue; }
-    if (inString && (ch === "\n" || ch === "\r")) { result += "\\n"; continue; }
-    result += ch;
-  }
-  return result;
-}
-
 export async function POST(req: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -65,6 +50,24 @@ export async function POST(req: NextRequest) {
       model,
       max_tokens: 1500,
       system: buildSystemPrompt(),
+      tools: [
+        {
+          name: "generate_insight",
+          description: "Generate a deep insight for the given category",
+          input_schema: {
+            type: "object" as const,
+            properties: {
+              question: { type: "string", description: "คำถามเชิงลึกที่ไม่ obvious (1–2 ประโยค)" },
+              perspective: { type: "string", description: "บทสนทนา/มุมมอง (3–5 ย่อหน้า)" },
+              mental_model: { type: "string", description: "Mental Model 1 อัน (2–3 ประโยค)" },
+              real_example: { type: "string", description: "ตัวอย่างจากโลกจริง (2–3 ประโยค)" },
+              reflection: { type: "string", description: "คำถามสั้นๆ ไว้คิดต่อวันนี้ (1 ประโยค)" },
+            },
+            required: ["question", "perspective", "mental_model", "real_example", "reflection"],
+          },
+        },
+      ],
+      tool_choice: { type: "tool", name: "generate_insight" },
       messages: [
         {
           role: "user",
@@ -73,51 +76,21 @@ export async function POST(req: NextRequest) {
       ],
     });
 
-    const rawText =
-      message.content[0].type === "text" ? message.content[0].text : "";
+    const toolUse = message.content.find((c) => c.type === "tool_use");
+    if (!toolUse || toolUse.type !== "tool_use") {
+      return NextResponse.json(
+        { error: "AI returned unexpected format. Please try again." },
+        { status: 502 }
+      );
+    }
 
-    let parsed: {
+    const parsed = toolUse.input as {
       question: string;
       perspective: string;
       mental_model: string;
       real_example: string;
       reflection: string;
     };
-
-    try {
-      let cleaned = rawText.trim();
-      // Strip markdown code fences like ```json ... ``` or ``` ... ```
-      cleaned = cleaned.replace(/^```[a-zA-Z]*\s*/g, "").replace(/```\s*$/g, "").trim();
-
-      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("No JSON found");
-
-      const jsonStr = jsonMatch[0];
-      try {
-        parsed = JSON.parse(jsonStr);
-      } catch {
-        // Escape literal newlines inside JSON string values, then fix trailing commas
-        const fixed = escapeStringNewlines(jsonStr).replace(/,\s*([}\]])/g, "$1");
-        parsed = JSON.parse(fixed);
-      }
-
-      if (
-        !parsed ||
-        typeof parsed.question !== "string" ||
-        typeof parsed.perspective !== "string" ||
-        typeof parsed.mental_model !== "string" ||
-        typeof parsed.real_example !== "string" ||
-        typeof parsed.reflection !== "string"
-      ) {
-        throw new Error("Missing fields");
-      }
-    } catch (parseErr) {
-      console.error("Failed to parse AI response:", parseErr, "raw:", rawText);
-      return NextResponse.json(
-        { error: "AI returned unexpected format. Please try again." },
-        { status: 502 }
-      );
-    }
 
     return NextResponse.json({
       category: resolvedCategory.label,
